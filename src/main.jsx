@@ -575,6 +575,10 @@ function ProfileSettingsModal({ profile, onClose, onSave, onUploadAvatar }) {
 
         <div className="avatar-upload-row">
           <Avatar user={profile} size="xl" />
+          <div className="profile-summary">
+            <span>Current username</span>
+            <strong>{profile.username || "Not set"}</strong>
+          </div>
           <label className="secondary-action">
             <ImagePlus size={17} />
             {isUploading ? "Uploading..." : "Upload avatar"}
@@ -695,6 +699,7 @@ function App() {
     }
 
     const user = activeSession.user;
+    console.log("[travel-map] authenticated user id", user.id);
     const { data: existingProfile } = await supabase
       .from("profiles")
       .select("*")
@@ -702,6 +707,7 @@ function App() {
       .maybeSingle();
 
     if (existingProfile) {
+      console.log("[travel-map] fetched profile", existingProfile);
       setProfile(existingProfile);
       return existingProfile;
     }
@@ -714,6 +720,7 @@ function App() {
       };
       const { data, error } = await supabase.from("profiles").insert(candidate).select("*").single();
       if (!error && data) {
+        console.log("[travel-map] fetched profile", data);
         setProfile(data);
         return data;
       }
@@ -736,19 +743,23 @@ function App() {
   }, []);
 
   const refreshSocialData = useCallback(async () => {
-    if (!supabase || !profile?.id) return;
+    const userId = session?.user?.id;
+    if (!supabase || !userId) return;
+
+    console.log("[travel-map] authenticated user id", userId);
 
     const [{ data: myData }, { data: friendRows }] = await Promise.all([
-      supabase.from("visited_countries").select("*").eq("user_id", profile.id),
+      supabase.from("visited_countries").select("*").eq("user_id", userId),
       supabase
         .from("friends")
         .select("friend_id, friend:profiles!friends_friend_id_fkey(id, username, avatar_url)")
-        .eq("user_id", profile.id),
+        .eq("user_id", userId),
     ]);
 
     const friendProfiles = (friendRows || []).map((row) => row.friend).filter(Boolean);
     const friendIds = friendProfiles.map((friend) => friend.id);
 
+    console.log("[travel-map] fetched visited countries count", myData?.length || 0);
     setMineVisits(myData || []);
     setFriends(friendProfiles);
 
@@ -775,7 +786,7 @@ function App() {
         country_name: countryNames.get(normalizeCountryCode(activity.country_code)) || activity.country_code,
       })),
     );
-  }, [countryNames, profile?.id]);
+  }, [countryNames, session?.user?.id]);
 
   useEffect(() => {
     loadMapData();
@@ -970,17 +981,22 @@ function App() {
           <button className="icon-button" onClick={refreshSocialData} title="Refresh" aria-label="Refresh">
             <RefreshCw size={18} />
           </button>
-          {profile && (
-            <button
-              className="profile-button"
-              onClick={() => setIsProfileOpen(true)}
-              title="Profile settings"
-              aria-label="Profile settings"
-            >
-              <Avatar user={profile} size="sm" />
-              <Settings size={16} />
-            </button>
-          )}
+          <button
+            className="profile-button"
+            onClick={() => {
+              if (profile) {
+                setIsProfileOpen(true);
+              } else {
+                setNotice("Profile is still loading.");
+              }
+            }}
+            title="Profile settings"
+            aria-label="Profile settings"
+          >
+            <Avatar user={profile || { username: "Profile" }} size="sm" />
+            <span>Profile</span>
+            <Settings size={16} />
+          </button>
           <button className="icon-button" onClick={signOut} title="Sign out" aria-label="Sign out">
             <LogOut size={18} />
           </button>

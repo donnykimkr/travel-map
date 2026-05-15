@@ -15,6 +15,7 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 button,
@@ -70,7 +71,8 @@ button:disabled {
 .app-shell {
   display: grid;
   grid-template-rows: auto 1fr;
-  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: visible;
 }
 
 .top-bar {
@@ -102,6 +104,9 @@ button:disabled {
 
 .top-actions {
   display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 8px;
 }
 
@@ -151,6 +156,7 @@ button:disabled {
   border-radius: 999px;
   color: #243244;
   background: #ffffff;
+  font-weight: 800;
 }
 
 .profile-button:hover {
@@ -161,12 +167,14 @@ button:disabled {
 .workspace {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 360px;
-  min-height: 0;
+  min-height: calc(100dvh - 82px);
+  padding-bottom: 12px;
 }
 
 .map-wrap {
   position: relative;
-  min-height: calc(100vh - 82px);
+  min-height: calc(100dvh - 94px);
+  padding-bottom: 12px;
 }
 
 .country-search {
@@ -208,7 +216,7 @@ button:disabled {
 .map {
   width: 100%;
   height: 100%;
-  min-height: calc(100vh - 82px);
+  min-height: calc(100dvh - 94px);
   background: #dbeafe;
 }
 
@@ -219,7 +227,7 @@ button:disabled {
 .legend {
   position: absolute;
   right: 16px;
-  bottom: 20px;
+  bottom: 32px;
   z-index: 420;
   display: flex;
   gap: 12px;
@@ -296,8 +304,9 @@ button:disabled {
   display: grid;
   align-content: start;
   gap: 12px;
-  overflow: auto;
-  padding: 14px;
+  max-height: calc(100dvh - 82px);
+  overflow-y: auto;
+  padding: 14px 14px 28px;
   border-left: 1px solid #d6dde6;
   background: #f8fafc;
 }
@@ -554,7 +563,26 @@ button:disabled {
 .avatar-upload-row {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 14px;
+}
+
+.profile-summary {
+  display: grid;
+  gap: 3px;
+  min-width: 120px;
+}
+
+.profile-summary span {
+  color: #64748b;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.profile-summary strong {
+  color: #0f172a;
+  font-size: 1rem;
+  overflow-wrap: anywhere;
 }
 
 .secondary-action {
@@ -601,7 +629,7 @@ button:disabled {
 .map-fallback {
   display: grid;
   height: 100%;
-  min-height: calc(100vh - 82px);
+  min-height: calc(100dvh - 94px);
   place-items: center;
   align-content: center;
   gap: 8px;
@@ -623,25 +651,35 @@ button:disabled {
 @media (max-width: 980px) {
   .workspace {
     grid-template-columns: 1fr;
+    min-height: auto;
+    padding-bottom: 0;
   }
 
   .panel-stack {
     grid-template-columns: repeat(3, minmax(260px, 1fr));
     overflow-x: auto;
+    overflow-y: visible;
+    max-height: none;
     border-top: 1px solid #d6dde6;
     border-left: 0;
   }
 
   .map-wrap,
   .map {
-    min-height: 62vh;
+    min-height: 62dvh;
   }
 }
 
 @media (max-width: 720px) {
   .top-bar {
     align-items: start;
+    flex-wrap: wrap;
     padding: 14px;
+  }
+
+  .top-actions {
+    width: 100%;
+    justify-content: flex-start;
   }
 
   .panel-stack {
@@ -650,7 +688,7 @@ button:disabled {
 
   .legend {
     right: 10px;
-    bottom: 12px;
+    bottom: 20px;
     flex-wrap: wrap;
     max-width: calc(100% - 20px);
   }
