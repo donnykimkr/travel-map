@@ -777,6 +777,7 @@ function App() {
       .maybeSingle();
 
     if (existingProfile) {
+      console.log("[travel-map] loaded profile id", existingProfile.id);
       console.log("[travel-map] fetched profile", existingProfile);
       setProfile(existingProfile);
       return existingProfile;
@@ -790,6 +791,7 @@ function App() {
       };
       const { data, error } = await supabase.from("profiles").insert(candidate).select("*").single();
       if (!error && data) {
+        console.log("[travel-map] loaded profile id", data.id);
         console.log("[travel-map] fetched profile", data);
         setProfile(data);
         return data;
@@ -830,6 +832,7 @@ function App() {
     const friendIds = friendProfiles.map((friend) => friend.id);
 
     console.log("[travel-map] fetched visited countries count", myData?.length || 0);
+    console.log("[travel-map] fetched friends count", friendProfiles.length);
     setMineVisits(myData || []);
     setFriends(friendProfiles);
 
@@ -882,14 +885,15 @@ function App() {
 
   const handleMarkVisited = useCallback(
     async (country) => {
-      if (!supabase || !profile?.id || !country?.code || visitState.mineSet.has(country.code)) return;
+      const userId = session?.user?.id;
+      if (!supabase || !userId || !country?.code || visitState.mineSet.has(country.code)) return;
 
       setIsSavingVisit(true);
       setMineVisits((current) => [
         ...current,
         {
           id: `optimistic-${country.code}`,
-          user_id: profile.id,
+          user_id: userId,
           country_code: country.code,
           created_at: new Date().toISOString(),
         },
@@ -897,7 +901,7 @@ function App() {
       setSelectedCountry(country);
 
       const { error } = await supabase.from("visited_countries").insert({
-        user_id: profile.id,
+        user_id: userId,
         country_code: country.code,
       });
 
@@ -909,20 +913,21 @@ function App() {
       }
 
       await supabase.from("activities").insert({
-        user_id: profile.id,
+        user_id: userId,
         country_code: country.code,
       });
 
       setIsSavingVisit(false);
       refreshSocialData();
     },
-    [profile?.id, refreshSocialData, visitState.mineSet],
+    [refreshSocialData, session?.user?.id, visitState.mineSet],
   );
 
   const handleAddFriend = async (event) => {
     event.preventDefault();
     const username = normalizeUsername(friendQuery);
-    if (!supabase || !username || !profile?.id) return;
+    const userId = session?.user?.id;
+    if (!supabase || !username || !userId) return;
 
     if (!isValidUsername(username)) {
       setNotice("Enter a valid username.");
@@ -942,14 +947,14 @@ function App() {
       return;
     }
 
-    if (friend.id === profile.id) {
+    if (friend.id === userId) {
       setNotice("That is your own username.");
       setIsAddingFriend(false);
       return;
     }
 
     const { error } = await supabase.from("friends").insert({
-      user_id: profile.id,
+      user_id: userId,
       friend_id: friend.id,
     });
 
@@ -965,7 +970,8 @@ function App() {
   };
 
   const handleSaveUsername = async (username) => {
-    if (!supabase || !profile?.id) return { error: "Profile is still loading." };
+    const userId = session?.user?.id;
+    if (!supabase || !userId) return { error: "Profile is still loading." };
 
     const { data: existing } = await supabase
       .from("profiles")
@@ -973,14 +979,14 @@ function App() {
       .eq("username", username)
       .maybeSingle();
 
-    if (existing && existing.id !== profile.id) {
+    if (existing && existing.id !== userId) {
       return { error: "Username already taken" };
     }
 
     const { data, error } = await supabase
       .from("profiles")
       .update({ username })
-      .eq("id", profile.id)
+      .eq("id", userId)
       .select("*")
       .single();
 
@@ -994,10 +1000,11 @@ function App() {
   };
 
   const handleUploadAvatar = async (file) => {
-    if (!supabase || !profile?.id) return { error: "Profile is still loading." };
+    const userId = session?.user?.id;
+    if (!supabase || !userId) return { error: "Profile is still loading." };
 
     const extension = file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
-    const path = `${profile.id}/${Date.now()}.${extension}`;
+    const path = `${userId}/${Date.now()}.${extension}`;
 
     const { error: uploadError } = await supabase.storage.from("avatars").upload(path, file, {
       cacheControl: "3600",
@@ -1032,7 +1039,7 @@ function App() {
     const { data, error } = await supabase
       .from("profiles")
       .update({ avatar_url: avatarUrl })
-      .eq("id", profile.id)
+      .eq("id", userId)
       .select("*")
       .single();
 
