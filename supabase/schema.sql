@@ -3,6 +3,7 @@ create extension if not exists pgcrypto;
 create table if not exists public.profiles (
   id uuid primary key,
   username text unique,
+  avatar_url text,
   friend_code text not null unique,
   constraint profiles_id_fkey foreign key (id) references auth.users(id) on delete cascade
 );

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { MapContainer, TileLayer, GeoJSON, useMap } from "react-leaflet";
-import { Check, LogOut, Plus, RefreshCw, Search, Users } from "lucide-react";
+import { GeoJSON, MapContainer, Marker, TileLayer, useMap } from "react-leaflet";
+import { Check, ImagePlus, LogOut, Plus, RefreshCw, Search, Settings, X } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "./styles.css";
@@ -14,6 +14,7 @@ import {
 } from "./utils/countries";
 
 const WORLD_GEOJSON_URL = "/countries.geojson";
+const MAX_AVATAR_SIZE = 2 * 1024 * 1024;
 
 function FitWorld() {
   const map = useMap();
@@ -35,6 +36,80 @@ function normalizeUsername(value) {
 
 function isValidUsername(value) {
   return /^[a-z0-9_]{3,20}$/.test(value);
+}
+
+function avatarLetter(username) {
+  return (username || "?").trim().charAt(0).toUpperCase() || "?";
+}
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function Avatar({ user, size = "md" }) {
+  const username = user?.username || "Traveler";
+
+  return user?.avatar_url ? (
+    <img className={`avatar avatar-${size}`} src={user.avatar_url} alt={`${username} avatar`} />
+  ) : (
+    <span className={`avatar avatar-${size} avatar-fallback`} aria-label={`${username} avatar`}>
+      {avatarLetter(username)}
+    </span>
+  );
+}
+
+function createAvatarIcon(friends) {
+  const visible = friends.slice(0, 3);
+  const extra = friends.length - visible.length;
+  const html = `
+    <div class="map-avatar-stack">
+      ${visible
+        .map((friend) => {
+          const username = escapeHtml(friend.username || "Friend");
+          const avatarUrl = escapeHtml(friend.avatar_url || "");
+          return avatarUrl
+            ? `<img class="map-avatar" src="${avatarUrl}" alt="${username}" />`
+            : `<span class="map-avatar map-avatar-fallback" title="${username}">${escapeHtml(
+                avatarLetter(friend.username),
+              )}</span>`;
+        })
+        .join("")}
+      ${extra > 0 ? `<span class="map-avatar-extra">+${extra}</span>` : ""}
+    </div>
+  `;
+
+  return L.divIcon({
+    className: "map-avatar-marker",
+    html,
+    iconSize: [92, 32],
+    iconAnchor: [18, 16],
+  });
+}
+
+function getFeatureBoundsCenter(feature) {
+  const points = [];
+  const collect = (coords) => {
+    if (typeof coords?.[0] === "number" && typeof coords?.[1] === "number") {
+      points.push(coords);
+      return;
+    }
+    coords?.forEach(collect);
+  };
+
+  collect(feature.geometry?.coordinates);
+  if (!points.length) return null;
+
+  const longitudes = points.map((point) => point[0]);
+  const latitudes = points.map((point) => point[1]);
+  const lng = (Math.min(...longitudes) + Math.max(...longitudes)) / 2;
+  const lat = (Math.min(...latitudes) + Math.max(...latitudes)) / 2;
+
+  return [lat, Math.max(-179.5, Math.min(179.5, lng))];
 }
 
 function LoginScreen() {
@@ -124,6 +199,40 @@ function CountrySearch({ countries, onSelectCountry }) {
       <button className="search-button">Go</button>
     </form>
   );
+}
+
+function FriendAvatarMarkers({ geojson, friendVisitMap, onSelectCountry }) {
+  const markers = useMemo(() => {
+    return (geojson?.features || [])
+      .map((feature) => {
+        const code = countryCodeFromFeature(feature);
+        const friends = friendVisitMap.get(code) || [];
+        if (!friends.length) return null;
+
+        const position = getFeatureBoundsCenter(feature);
+        if (!position) return null;
+
+        return {
+          code,
+          name: countryNameFromFeature(feature),
+          flag: countryFlag(code),
+          friends,
+          position,
+        };
+      })
+      .filter(Boolean);
+  }, [friendVisitMap, geojson]);
+
+  return markers.map((marker) => (
+    <Marker
+      key={marker.code}
+      position={marker.position}
+      icon={createAvatarIcon(marker.friends)}
+      eventHandlers={{
+        click: () => onSelectCountry({ code: marker.code, name: marker.name, flag: marker.flag }),
+      }}
+    />
+  ));
 }
 
 function TravelMap({ geojson, visits, friendVisitMap, selectedCountry, onSelectCountry, onMarkVisited }) {
@@ -264,6 +373,7 @@ function TravelMap({ geojson, visits, friendVisitMap, selectedCountry, onSelectC
         style={styleFeature}
         onEachFeature={onEachFeature}
       />
+      <FriendAvatarMarkers geojson={geojson} friendVisitMap={friendVisitMap} onSelectCountry={onSelectCountry} />
       <MapLegend />
     </MapContainer>
   );
@@ -292,9 +402,12 @@ function CountryPanel({ country, mineSet, friendVisitMap, onMarkVisited, isSavin
           <div>
             <h3>Friends who visited</h3>
             {friends.length ? (
-              <ul className="simple-list">
+              <ul className="simple-list avatar-list">
                 {friends.map((friend) => (
-                  <li key={friend.id}>{friend.username}</li>
+                  <li key={friend.id}>
+                    <Avatar user={friend} size="sm" />
+                    <span>{friend.username}</span>
+                  </li>
                 ))}
               </ul>
             ) : (
@@ -334,7 +447,7 @@ function FriendPanel({ friends, friendQuery, setFriendQuery, onAddFriend, isAddi
         <ul className="simple-list friend-list">
           {friends.map((friend) => (
             <li key={friend.id}>
-              <Users size={15} />
+              <Avatar user={friend} size="sm" />
               {friend.username}
             </li>
           ))}
@@ -394,6 +507,101 @@ function UsernameSetupModal({ onSave }) {
   );
 }
 
+function ProfileSettingsModal({ profile, onClose, onSave, onUploadAvatar }) {
+  const [username, setUsername] = useState(profile?.username || "");
+  const [error, setError] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const normalized = normalizeUsername(username);
+
+  const handleSave = async (event) => {
+    event.preventDefault();
+    setError("");
+
+    if (!isValidUsername(normalized)) {
+      setError("Use 3-20 lowercase letters, numbers, or underscores.");
+      return;
+    }
+
+    setIsSaving(true);
+    const result = await onSave(normalized);
+    setIsSaving(false);
+
+    if (result?.error) {
+      setError(result.error);
+      return;
+    }
+
+    onClose();
+  };
+
+  const handleAvatarChange = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    setError("");
+
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setError("Please choose an image file.");
+      return;
+    }
+    if (file.size > MAX_AVATAR_SIZE) {
+      setError("Avatar image must be 2MB or smaller.");
+      return;
+    }
+
+    setIsUploading(true);
+    const result = await onUploadAvatar(file);
+    setIsUploading(false);
+
+    if (result?.error) {
+      setError(result.error);
+    }
+  };
+
+  return (
+    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="profile-settings-title">
+      <form className="username-modal profile-modal" onSubmit={handleSave}>
+        <div className="modal-title-row">
+          <div>
+            <p className="eyebrow">Settings</p>
+            <h2 id="profile-settings-title">Profile</h2>
+          </div>
+          <button type="button" className="icon-button" onClick={onClose} title="Close" aria-label="Close">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="avatar-upload-row">
+          <Avatar user={profile} size="xl" />
+          <label className="secondary-action">
+            <ImagePlus size={17} />
+            {isUploading ? "Uploading..." : "Upload avatar"}
+            <input type="file" accept="image/*" onChange={handleAvatarChange} disabled={isUploading} />
+          </label>
+        </div>
+
+        <label className="field-label">
+          Username
+          <input
+            value={username}
+            onChange={(event) => setUsername(normalizeUsername(event.target.value))}
+            placeholder="username"
+            aria-label="Username"
+          />
+        </label>
+
+        {error && <p className="form-error">{error}</p>}
+
+        <button className="primary-action" disabled={isSaving || isUploading}>
+          {isSaving ? "Saving..." : "Save changes"}
+        </button>
+      </form>
+    </div>
+  );
+}
+
 function ActivityFeed({ activities }) {
   return (
     <aside className="side-panel activity-feed">
@@ -405,8 +613,11 @@ function ActivityFeed({ activities }) {
         <ul className="activity-list">
           {activities.map((activity) => (
             <li key={activity.id}>
-              <span>{activity.profiles?.username || "A friend"}</span> visited{" "}
-              {countryFlag(activity.country_code)} {activity.country_name}
+              <Avatar user={activity.profiles} size="sm" />
+              <span>{activity.profiles?.username || "A friend"}</span>
+              <span>
+                visited {countryFlag(activity.country_code)} {activity.country_name}
+              </span>
             </li>
           ))}
         </ul>
@@ -431,6 +642,7 @@ function App() {
   const [notice, setNotice] = useState("");
   const [isSavingVisit, setIsSavingVisit] = useState(false);
   const [isAddingFriend, setIsAddingFriend] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   const countryNames = useMemo(() => {
     const map = new Map();
@@ -530,7 +742,7 @@ function App() {
       supabase.from("visited_countries").select("*").eq("user_id", profile.id),
       supabase
         .from("friends")
-        .select("friend_id, friend:profiles!friends_friend_id_fkey(id, username, friend_code)")
+        .select("friend_id, friend:profiles!friends_friend_id_fkey(id, username, avatar_url)")
         .eq("user_id", profile.id),
     ]);
 
@@ -550,7 +762,7 @@ function App() {
       supabase.from("visited_countries").select("*").in("user_id", friendIds),
       supabase
         .from("activities")
-        .select("id, user_id, country_code, created_at, profiles!activities_user_id_fkey(username)")
+        .select("id, user_id, country_code, created_at, profiles!activities_user_id_fkey(username, avatar_url)")
         .in("user_id", friendIds)
         .order("created_at", { ascending: false })
         .limit(20),
@@ -700,6 +912,44 @@ function App() {
     return { data };
   };
 
+  const handleUploadAvatar = async (file) => {
+    if (!supabase || !profile?.id) return { error: "Profile is still loading." };
+
+    const extension = file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+    const path = `${profile.id}/${Date.now()}.${extension}`;
+
+    const { error: uploadError } = await supabase.storage.from("avatars").upload(path, file, {
+      cacheControl: "3600",
+      upsert: true,
+      contentType: file.type,
+    });
+
+    if (uploadError) {
+      return { error: uploadError.message };
+    }
+
+    const { data: publicData } = supabase.storage.from("avatars").getPublicUrl(path);
+    const avatarUrl = publicData?.publicUrl;
+
+    if (!avatarUrl) {
+      return { error: "Could not get avatar URL." };
+    }
+
+    const { data, error } = await supabase
+      .from("profiles")
+      .update({ avatar_url: avatarUrl })
+      .eq("id", profile.id)
+      .select("*")
+      .single();
+
+    if (error) {
+      return { error: error.message };
+    }
+
+    setProfile(data);
+    return { data };
+  };
+
   const signOut = async () => {
     if (!supabase) return;
     await supabase.auth.signOut();
@@ -720,6 +970,17 @@ function App() {
           <button className="icon-button" onClick={refreshSocialData} title="Refresh" aria-label="Refresh">
             <RefreshCw size={18} />
           </button>
+          {profile && (
+            <button
+              className="profile-button"
+              onClick={() => setIsProfileOpen(true)}
+              title="Profile settings"
+              aria-label="Profile settings"
+            >
+              <Avatar user={profile} size="sm" />
+              <Settings size={16} />
+            </button>
+          )}
           <button className="icon-button" onClick={signOut} title="Sign out" aria-label="Sign out">
             <LogOut size={18} />
           </button>
@@ -733,6 +994,15 @@ function App() {
       )}
 
       {profile && !isValidUsername(profile.username || "") && <UsernameSetupModal onSave={handleSaveUsername} />}
+
+      {profile && isProfileOpen && (
+        <ProfileSettingsModal
+          profile={profile}
+          onClose={() => setIsProfileOpen(false)}
+          onSave={handleSaveUsername}
+          onUploadAvatar={handleUploadAvatar}
+        />
+      )}
 
       <section className="workspace">
         <div className="map-wrap">
