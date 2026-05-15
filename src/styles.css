@@ -163,6 +163,28 @@ button:disabled {
   background: #d1fae5;
 }
 
+.floating-profile-button {
+  position: fixed;
+  top: 132px;
+  right: 386px;
+  z-index: 850;
+  display: inline-flex;
+  min-height: 46px;
+  align-items: center;
+  gap: 9px;
+  padding: 0 16px;
+  border: 2px solid #0f766e;
+  border-radius: 999px;
+  color: #ffffff;
+  background: #0f766e;
+  font-weight: 900;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.24);
+}
+
+.floating-profile-button:hover {
+  background: #115e59;
+}
+
 .workspace {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 360px;
@@ -682,6 +704,11 @@ button:disabled {
   .map {
     min-height: 62dvh;
   }
+
+  .floating-profile-button {
+    top: 92px;
+    right: 14px;
+  }
 }
 
 @media (max-width: 720px) {
@@ -711,5 +738,12 @@ button:disabled {
     right: 10px;
     left: 10px;
     grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .floating-profile-button {
+    top: 128px;
+    right: 12px;
+    min-height: 42px;
+    padding: 0 12px;
   }
 }

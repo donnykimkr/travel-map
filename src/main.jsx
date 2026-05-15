@@ -1040,6 +1040,20 @@ function App() {
         />
       )}
 
+      <button
+        className="floating-profile-button"
+        onClick={() => {
+          if (profile) {
+            setIsProfileOpen(true);
+          } else {
+            setNotice("Profile is still loading.");
+          }
+        }}
+      >
+        <Settings size={18} />
+        Profile Settings
+      </button>
+
       <section className="workspace">
         <div className="map-wrap">
           {countryOptions.length > 0 && (
