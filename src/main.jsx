@@ -459,6 +459,26 @@ function FriendPanel({ friends, friendQuery, setFriendQuery, onAddFriend, isAddi
   );
 }
 
+function ProfilePanel({ profile, onOpen }) {
+  return (
+    <aside className="side-panel profile-card">
+      <div className="panel-heading">
+        <div className="profile-card-user">
+          <Avatar user={profile || { username: "Profile" }} size="md" />
+          <div>
+            <h2>Profile</h2>
+            <p>{profile?.username || "Profile loading"}</p>
+          </div>
+        </div>
+      </div>
+      <button className="secondary-action profile-card-action" onClick={onOpen}>
+        <Settings size={17} />
+        Open profile settings
+      </button>
+    </aside>
+  );
+}
+
 function UsernameSetupModal({ onSave }) {
   const [username, setUsername] = useState("");
   const [error, setError] = useState("");
@@ -1042,6 +1062,16 @@ function App() {
           )}
         </div>
         <div className="panel-stack">
+          <ProfilePanel
+            profile={profile}
+            onOpen={() => {
+              if (profile) {
+                setIsProfileOpen(true);
+              } else {
+                setNotice("Profile is still loading.");
+              }
+            }}
+          />
           <CountryPanel
             country={selectedCountry}
             mineSet={visitState.mineSet}
