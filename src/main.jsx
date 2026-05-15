@@ -459,7 +459,7 @@ function FriendPanel({ friends, friendQuery, setFriendQuery, onAddFriend, isAddi
   );
 }
 
-function ProfilePanel({ profile, onOpen }) {
+function ProfilePanel({ profile }) {
   return (
     <aside className="side-panel profile-card">
       <div className="panel-heading">
@@ -471,10 +471,31 @@ function ProfilePanel({ profile, onOpen }) {
           </div>
         </div>
       </div>
-      <button className="secondary-action profile-card-action" onClick={onOpen}>
-        <Settings size={17} />
-        Open profile settings
-      </button>
+    </aside>
+  );
+}
+
+function LeaderboardPanel({ leaderboard }) {
+  return (
+    <aside className="side-panel">
+      <div className="panel-heading">
+        <h2>Leaderboard</h2>
+        <p>Countries visited</p>
+      </div>
+      {leaderboard.length ? (
+        <ol className="leaderboard-list">
+          {leaderboard.map((entry, index) => (
+            <li key={entry.id}>
+              <span className="leaderboard-rank">{index + 1}</span>
+              <Avatar user={entry} size="sm" />
+              <span className="leaderboard-name">{entry.username}</span>
+              <span className="leaderboard-count">{entry.visitCount}</span>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <p className="empty-text">Add friends to compare travel progress.</p>
+      )}
     </aside>
   );
 }
@@ -711,6 +732,35 @@ function App() {
     });
     return map;
   }, [friendVisits, friends]);
+
+  const leaderboard = useMemo(() => {
+    const entries = [];
+
+    if (profile) {
+      entries.push({
+        ...profile,
+        username: profile.username || "You",
+        visitCount: new Set(mineVisits.map((visit) => normalizeCountryCode(visit.country_code))).size,
+      });
+    }
+
+    friends.forEach((friend) => {
+      entries.push({
+        ...friend,
+        username: friend.username || "Friend",
+        visitCount: new Set(
+          friendVisits
+            .filter((visit) => visit.user_id === friend.id)
+            .map((visit) => normalizeCountryCode(visit.country_code)),
+        ).size,
+      });
+    });
+
+    return entries.sort((a, b) => {
+      if (b.visitCount !== a.visitCount) return b.visitCount - a.visitCount;
+      return a.username.localeCompare(b.username);
+    });
+  }, [friendVisits, friends, mineVisits, profile]);
 
   const hydrateProfile = useCallback(async (activeSession) => {
     if (!supabase || !activeSession?.user) {
@@ -1040,20 +1090,6 @@ function App() {
         />
       )}
 
-      <button
-        className="floating-profile-button"
-        onClick={() => {
-          if (profile) {
-            setIsProfileOpen(true);
-          } else {
-            setNotice("Profile is still loading.");
-          }
-        }}
-      >
-        <Settings size={18} />
-        Profile Settings
-      </button>
-
       <section className="workspace">
         <div className="map-wrap">
           {countryOptions.length > 0 && (
@@ -1076,16 +1112,7 @@ function App() {
           )}
         </div>
         <div className="panel-stack">
-          <ProfilePanel
-            profile={profile}
-            onOpen={() => {
-              if (profile) {
-                setIsProfileOpen(true);
-              } else {
-                setNotice("Profile is still loading.");
-              }
-            }}
-          />
+          <ProfilePanel profile={profile} />
           <CountryPanel
             country={selectedCountry}
             mineSet={visitState.mineSet}
@@ -1102,6 +1129,7 @@ function App() {
               isAdding={isAddingFriend}
             />
           )}
+          <LeaderboardPanel leaderboard={leaderboard} />
           <ActivityFeed activities={activities} />
         </div>
       </section>
