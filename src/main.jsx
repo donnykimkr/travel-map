@@ -1006,6 +1006,19 @@ function App() {
     });
 
     if (uploadError) {
+      const message = uploadError.message || "";
+      const isMissingBucket =
+        message.toLowerCase().includes("bucket not found") ||
+        uploadError.statusCode === "404" ||
+        uploadError.error === "Bucket not found";
+
+      if (isMissingBucket) {
+        return {
+          error:
+            "Avatar upload is not set up yet. In Supabase Storage, create a public bucket named exactly \"avatars\", then run supabase/migrations/002_profile_avatars.sql.",
+        };
+      }
+
       return { error: uploadError.message };
     }
 
