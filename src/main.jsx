@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { GeoJSON, MapContainer, Marker, Popup, TileLayer, useMap, useMapEvents } from "react-leaflet";
-import { Check, Globe2, ImagePlus, Landmark, LogOut, Plus, RefreshCw, Search, Settings, X } from "lucide-react";
+import { Check, Globe2, Home, ImagePlus, Landmark, LogOut, Medal, Plus, RefreshCw, Search, Settings, X } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "./styles.css";
@@ -25,6 +25,11 @@ const DEFAULT_LANGUAGE = "en";
 const LANGUAGE_OPTIONS = [
   { code: "en", label: "English" },
   { code: "ko", label: "한국어" },
+];
+const BADGES = [
+  { id: "countries-5", threshold: 5, name: "Visited 5 countries!" },
+  { id: "countries-10", threshold: 10, name: "Visited 10 countries!" },
+  { id: "countries-20", threshold: 20, name: "Visited 20 countries!" },
 ];
 const TILE_LAYERS = {
   en: {
@@ -106,6 +111,13 @@ const TEXT = {
     totalVisitRecords: "Total visited country records",
     uploadAvatar: "Upload avatar",
     username: "Username",
+    homeCountry: "Home country",
+    noHomeCountry: "No home country set",
+    removeVisited: "Remove from visited",
+    badges: "Badges",
+    unlocked: "Unlocked",
+    locked: "Locked",
+    globalRarity: "{percent}% of users unlocked this",
     usernameSetupTitle: "Choose a username",
     usernameSetupCopy: "Friends will find you by this name.",
     usernameRules: "Use 3-20 lowercase letters, numbers, or underscores.",
@@ -191,6 +203,13 @@ const TEXT = {
     totalVisitRecords: "전체 국가 방문 기록",
     uploadAvatar: "아바타 업로드",
     username: "사용자명",
+    homeCountry: "홈 국가",
+    noHomeCountry: "홈 국가 미설정",
+    removeVisited: "방문 기록에서 제거",
+    badges: "배지",
+    unlocked: "해제됨",
+    locked: "잠김",
+    globalRarity: "사용자 {percent}%가 해제했습니다",
     usernameSetupTitle: "사용자명 만들기",
     usernameSetupCopy: "친구들이 이 이름으로 나를 찾을 수 있어요.",
     usernameRules: "3-20자의 소문자, 숫자, 밑줄만 사용할 수 있습니다.",
@@ -215,7 +234,7 @@ const TEXT = {
 const LANDMARKS = [
   {
     id: "statue-of-liberty",
-    icon: "🗽",
+    imageUrl: "https://images.unsplash.com/photo-1605130284535-11dd9eedc58a?auto=format&fit=crop&w=420&q=80",
     name: "Statue of Liberty",
     countryCode: "US",
     country: "United States",
@@ -227,7 +246,7 @@ const LANDMARKS = [
   },
   {
     id: "tokyo-tower",
-    icon: "🗼",
+    imageUrl: "https://images.unsplash.com/photo-1536098561742-ca998e48cbcc?auto=format&fit=crop&w=420&q=80",
     name: "Tokyo Tower",
     countryCode: "JP",
     country: "Japan",
@@ -235,6 +254,18 @@ const LANDMARKS = [
     lat: 35.6586,
     lng: 139.7454,
     description: "A bright communications tower and beloved symbol of Tokyo's skyline.",
+  },
+  {
+    id: "marina-bay-sands",
+    imageUrl:
+      "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cc/Marina_Bay_Sands_at_night_%281%29.jpg/330px-Marina_Bay_Sands_at_night_%281%29.jpg",
+    name: "Marina Bay Sands",
+    countryCode: "SG",
+    country: "Singapore",
+    city: "Singapore",
+    lat: 1.2834,
+    lng: 103.8607,
+    description: "A striking waterfront resort and one of Singapore's most recognizable skyline landmarks.",
   },
 ];
 
@@ -350,14 +381,18 @@ function createAvatarIcon(friends) {
 }
 
 function createLandmarkIcon(landmark, collected) {
+  const imageUrl = escapeHtml(landmark.imageUrl || "");
+  const fallback = escapeHtml(landmark.name.charAt(0));
   return L.divIcon({
     className: "landmark-marker",
-    html: `<span class="landmark-marker-image ${collected ? "is-collected" : ""}" aria-label="${escapeHtml(
-      landmark.name,
-    )}">${escapeHtml(landmark.icon)}</span>`,
-    iconSize: [42, 42],
-    iconAnchor: [21, 21],
-    popupAnchor: [0, -22],
+    html: imageUrl
+      ? `<img class="landmark-marker-photo ${collected ? "is-collected" : ""}" src="${imageUrl}" alt="${escapeHtml(
+          landmark.name,
+        )}" />`
+      : `<span class="landmark-marker-photo landmark-marker-fallback ${collected ? "is-collected" : ""}">${fallback}</span>`,
+    iconSize: [46, 46],
+    iconAnchor: [23, 23],
+    popupAnchor: [0, -24],
   });
 }
 
@@ -504,6 +539,43 @@ function FriendAvatarMarkers({ geojson, friendVisitMap, onSelectCountry }) {
   ));
 }
 
+function createHomeIcon() {
+  return L.divIcon({
+    className: "home-country-marker",
+    html: `<span class="home-country-dot" aria-label="Home country">⌂</span>`,
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
+  });
+}
+
+function HomeCountryMarker({ geojson, homeCountryCode, onSelectCountry }) {
+  const marker = useMemo(() => {
+    const code = normalizeCountryCode(homeCountryCode);
+    if (!code) return null;
+    const feature = (geojson?.features || []).find((item) => countryCodeFromFeature(item) === code);
+    if (!feature) return null;
+    const position = getFeatureBoundsCenter(feature);
+    if (!position) return null;
+    return {
+      code,
+      flag: countryFlag(code),
+      position,
+    };
+  }, [geojson, homeCountryCode]);
+
+  if (!marker) return null;
+
+  return (
+    <Marker
+      position={marker.position}
+      icon={createHomeIcon()}
+      eventHandlers={{
+        click: () => onSelectCountry({ code: marker.code, flag: marker.flag }),
+      }}
+    />
+  );
+}
+
 function LandmarkMarkers({ landmarks, collectedSet, language, onCollect }) {
   return landmarks.map((landmark) => {
     const collected = collectedSet.has(landmark.id);
@@ -517,6 +589,7 @@ function LandmarkMarkers({ landmarks, collectedSet, language, onCollect }) {
       >
         <Popup className="landmark-popup">
           <div className="landmark-popup-content">
+            {landmark.imageUrl && <img className="landmark-popup-photo" src={landmark.imageUrl} alt={landmark.name} />}
             <div className="landmark-popup-title">
               <div>
                 <h3>{landmark.name}</h3>
@@ -548,8 +621,10 @@ function TravelMap({
   collectedLandmarkSet,
   language,
   animatedCountryCode,
+  homeCountryCode,
   onSelectCountry,
   onMarkVisited,
+  onRemoveVisited,
   onCollectLandmark,
 }) {
   const geoJsonRef = useRef(null);
@@ -678,12 +753,11 @@ function TravelMap({
   const onEachFeature = useCallback(
     (feature, layer) => {
       const code = countryCodeFromFeature(feature);
-      const name = getCountryName(code, language) || countryNameFromFeature(feature);
       const flag = countryFlag(code);
 
       layer.on({
         click: () => {
-          onSelectCountry({ code, name, flag });
+          onSelectCountry({ code, flag });
           layer.openPopup();
         },
         mouseover: () => {
@@ -702,6 +776,7 @@ function TravelMap({
       });
 
       layer.bindPopup(() => {
+        const name = getCountryName(code, language) || countryNameFromFeature(feature);
         const mine = visitedMine.has(code);
         const friends = friendVisitMap.get(code) || [];
         const friendList = friends.length
@@ -713,19 +788,23 @@ function TravelMap({
         wrapper.innerHTML = `
           <div class="popup-title">${flag} ${name}</div>
           ${friendList}
-          <button class="popup-button" ${mine ? "disabled" : ""}>
-            ${mine ? t(language, "visited") : t(language, "countryVisited")}
+          <button class="popup-button">
+            ${mine ? t(language, "removeVisited") : t(language, "countryVisited")}
           </button>
         `;
         const button = wrapper.querySelector("button");
         L.DomEvent.on(button, "click", (event) => {
           L.DomEvent.stop(event);
-          onMarkVisited({ code, name, flag });
+          if (mine) {
+            onRemoveVisited({ code, flag });
+          } else {
+            onMarkVisited({ code, flag });
+          }
         });
         return wrapper;
       });
     },
-    [friendVisitMap, language, onMarkVisited, onSelectCountry, styleFeature, visitedMine],
+    [friendVisitMap, language, onMarkVisited, onRemoveVisited, onSelectCountry, styleFeature, visitedMine],
   );
 
   const handleZoomChange = useCallback((nextZoom) => {
@@ -757,12 +836,13 @@ function TravelMap({
       />
       <OceanWaveOverlay />
       <GeoJSON
-        key={`${visitedMine.size}-${visitedFriend.size}`}
+        key={`${visitedMine.size}-${visitedFriend.size}-${language}`}
         ref={geoJsonRef}
         data={geojson}
         style={styleFeature}
         onEachFeature={onEachFeature}
       />
+      <HomeCountryMarker geojson={geojson} homeCountryCode={homeCountryCode} onSelectCountry={onSelectCountry} />
       {!countryDetailMode && (
         <FriendAvatarMarkers geojson={geojson} friendVisitMap={friendVisitMap} onSelectCountry={onSelectCountry} />
       )}
@@ -779,9 +859,10 @@ function TravelMap({
   );
 }
 
-function CountryPanel({ country, mineSet, friendVisitMap, language, onMarkVisited, isSaving }) {
+function CountryPanel({ country, mineSet, friendVisitMap, language, onMarkVisited, onRemoveVisited, isSaving }) {
   const friends = country ? friendVisitMap.get(country.code) || [] : [];
   const mine = country ? mineSet.has(country.code) : false;
+  const displayName = country ? getCountryName(country.code, language) || country.name : "";
 
   return (
     <aside className="side-panel country-panel">
@@ -789,18 +870,20 @@ function CountryPanel({ country, mineSet, friendVisitMap, language, onMarkVisite
         <>
           <div className="panel-heading">
             <h2>
-              {country.flag} {getCountryName(country.code, language) || country.name}
+              {country.flag} {displayName}
             </h2>
             <p>
               {t(language, "youVisited")}: {mine ? t(language, "yes") : t(language, "no")}
             </p>
           </div>
-          {!mine && (
-            <button className="primary-action" onClick={() => onMarkVisited(country)} disabled={isSaving}>
-              <Check size={17} />
-              {t(language, "countryVisited")}
-            </button>
-          )}
+          <button
+            className={mine ? "secondary-action danger-action" : "primary-action"}
+            onClick={() => (mine ? onRemoveVisited(country) : onMarkVisited(country))}
+            disabled={isSaving}
+          >
+            <Check size={17} />
+            {mine ? t(language, "removeVisited") : t(language, "countryVisited")}
+          </button>
           <div>
             <h3>{t(language, "friendsVisited")}</h3>
             {friends.length ? (
@@ -864,6 +947,7 @@ function FriendPanel({ friends, friendQuery, setFriendQuery, language, onAddFrie
 }
 
 function ProfilePanel({ profile, language }) {
+  const homeCountryName = getCountryName(profile?.home_country_code, language);
   return (
     <aside className="side-panel profile-card">
       <div className="panel-heading">
@@ -874,6 +958,9 @@ function ProfilePanel({ profile, language }) {
               {t(language, "profile")} {profile?.is_admin && <span className="admin-badge">{t(language, "admin")}</span>}
             </h2>
             <p>{profile?.username || t(language, "profileLoading")}</p>
+            <p className="profile-home-line">
+              <Home size={13} /> {homeCountryName || t(language, "noHomeCountry")}
+            </p>
           </div>
         </div>
       </div>
@@ -954,9 +1041,10 @@ function UsernameSetupModal({ language, onSave }) {
   );
 }
 
-function ProfileSettingsModal({ profile, language, onClose, onSave, onUploadAvatar }) {
+function ProfileSettingsModal({ profile, language, countryOptions = [], onClose, onSave, onUploadAvatar }) {
   const [username, setUsername] = useState(profile?.username || "");
   const [selectedLanguage, setSelectedLanguage] = useState(language);
+  const [homeCountryCode, setHomeCountryCode] = useState(profile?.home_country_code || "");
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -973,7 +1061,7 @@ function ProfileSettingsModal({ profile, language, onClose, onSave, onUploadAvat
     }
 
     setIsSaving(true);
-    const result = await onSave(normalized, selectedLanguage);
+    const result = await onSave(normalized, selectedLanguage, homeCountryCode);
     setIsSaving(false);
 
     if (result?.error) {
@@ -1059,6 +1147,22 @@ function ProfileSettingsModal({ profile, language, onClose, onSave, onUploadAvat
           </select>
         </label>
 
+        <label className="field-label">
+          {t(language, "homeCountry")}
+          <select
+            value={homeCountryCode || ""}
+            onChange={(event) => setHomeCountryCode(event.target.value)}
+            aria-label={t(language, "homeCountry")}
+          >
+            <option value="">{t(language, "noHomeCountry")}</option>
+            {countryOptions.map((country) => (
+              <option key={country.code} value={country.code}>
+                {country.flag} {country.name}
+              </option>
+            ))}
+          </select>
+        </label>
+
         {error && <p className="form-error">{error}</p>}
 
         <button className="primary-action" disabled={isSaving || isUploading}>
@@ -1121,9 +1225,13 @@ function LandmarkCollectionModal({ landmarks, collectedSet, language, onCollect,
 
             return (
               <article className={`landmark-card ${collected ? "is-collected" : ""}`} key={landmark.id}>
-                <div className="landmark-icon" aria-hidden="true">
-                  {landmark.icon}
-                </div>
+                {landmark.imageUrl ? (
+                  <img className="landmark-card-photo" src={landmark.imageUrl} alt={landmark.name} />
+                ) : (
+                  <div className="landmark-card-photo landmark-card-fallback" aria-hidden="true">
+                    {landmark.name.charAt(0)}
+                  </div>
+                )}
                 <div className="landmark-card-body">
                   <div className="landmark-card-heading">
                     <div>
@@ -1138,7 +1246,7 @@ function LandmarkCollectionModal({ landmarks, collectedSet, language, onCollect,
                   </div>
                   <p className="landmark-description">{landmark.description}</p>
                   <button
-                    className={collected ? "secondary-action" : "primary-action"}
+                    className={`landmark-action-button ${collected ? "secondary-action" : "primary-action"}`}
                     onClick={() => onCollect(landmark.id)}
                     disabled={collected}
                   >
@@ -1225,6 +1333,38 @@ function GlobalPercentilePanel({ stats, language }) {
           ? formatText(language, "globalPercentileTop", { percent: stats.topPercent })
           : t(language, "globalPercentileEmpty")}
       </p>
+    </aside>
+  );
+}
+
+function BadgesPanel({ visitCount, stats, language }) {
+  return (
+    <aside className="side-panel badges-panel">
+      <div className="panel-heading">
+        <h2>{t(language, "badges")}</h2>
+        <p>{visitCount}</p>
+      </div>
+      <div className="badge-grid">
+        {BADGES.map((badge) => {
+          const unlocked = visitCount >= badge.threshold;
+          const rarity = stats?.badgeRarities?.[badge.id];
+
+          return (
+            <article className={`badge-card ${unlocked ? "is-unlocked" : ""}`} key={badge.id}>
+              <Medal size={18} />
+              <div>
+                <h3>{badge.name}</h3>
+                <p>{unlocked ? t(language, "unlocked") : t(language, "locked")}</p>
+                <p>
+                  {rarity === null || rarity === undefined
+                    ? t(language, "globalPercentileEmpty")
+                    : formatText(language, "globalRarity", { percent: rarity })}
+                </p>
+              </div>
+            </article>
+          );
+        })}
+      </div>
     </aside>
   );
 }
@@ -1499,14 +1639,24 @@ function App() {
     const usersWithFewerVisits = allCounts.filter((count) => count < myCount).length;
     const percentile = usersWithVisits ? Math.round((usersWithFewerVisits / usersWithVisits) * 100) : 0;
     const topPercent = Math.max(1, 100 - percentile);
+    const totalUserCount = totalUsers || 0;
+    const badgeRarities = Object.fromEntries(
+      BADGES.map((badge) => {
+        const unlockedCount = Array.from(userVisitCounts.values()).filter(
+          (codes) => codes.size >= badge.threshold,
+        ).length;
+        return [badge.id, totalUserCount >= 3 ? Math.round((unlockedCount / totalUserCount) * 100) : null];
+      }),
+    );
 
     setGlobalStats({
       hasEnoughUsers: usersWithVisits >= 3,
       percentile,
       topPercent,
-      totalUsers: totalUsers || 0,
+      totalUsers: totalUserCount,
       totalVisitRecords: totalVisitRecords || 0,
       totalLandmarkVisits,
+      badgeRarities,
     });
   }, [landmarkVisits.length, session?.user?.id]);
 
@@ -1593,6 +1743,33 @@ function App() {
     [refreshSocialData, session?.user?.id, visitState.mineSet],
   );
 
+  const handleRemoveVisited = useCallback(
+    async (country) => {
+      const userId = session?.user?.id;
+      if (!supabase || !userId || !country?.code || !visitState.mineSet.has(country.code)) return;
+
+      const removedVisits = mineVisits.filter((visit) => normalizeCountryCode(visit.country_code) === country.code);
+      setIsSavingVisit(true);
+      setMineVisits((current) => current.filter((visit) => normalizeCountryCode(visit.country_code) !== country.code));
+      setSelectedCountry(country);
+
+      const { error } = await supabase
+        .from("visited_countries")
+        .delete()
+        .eq("user_id", userId)
+        .eq("country_code", country.code);
+
+      if (error) {
+        setNotice(error.message);
+        setMineVisits((current) => [...current, ...removedVisits]);
+      }
+
+      setIsSavingVisit(false);
+      refreshSocialData();
+    },
+    [mineVisits, refreshSocialData, session?.user?.id, visitState.mineSet],
+  );
+
   const handleAddFriend = async (event) => {
     event.preventDefault();
     const username = normalizeUsername(friendQuery);
@@ -1639,7 +1816,7 @@ function App() {
     setIsAddingFriend(false);
   };
 
-  const handleSaveUsername = async (username, nextLanguage) => {
+  const handleSaveUsername = async (username, nextLanguage, nextHomeCountryCode = profile?.home_country_code || "") => {
     const userId = session?.user?.id;
     if (!supabase || !userId) return { error: t(language, "profileStillLoading") };
 
@@ -1655,10 +1832,25 @@ function App() {
 
     let { data, error } = await supabase
       .from("profiles")
-      .update({ username, language: nextLanguage || language })
+      .update({
+        username,
+        language: nextLanguage || language,
+        home_country_code: nextHomeCountryCode || null,
+      })
       .eq("id", userId)
       .select("*")
       .single();
+
+    if (error && String(error.message || "").includes("home_country_code")) {
+      const fallback = await supabase
+        .from("profiles")
+        .update({ username, language: nextLanguage || language })
+        .eq("id", userId)
+        .select("*")
+        .single();
+      data = fallback.data;
+      error = fallback.error;
+    }
 
     if (error && String(error.message || "").includes("language")) {
       const fallback = await supabase
@@ -1681,6 +1873,7 @@ function App() {
       id: userId,
       username,
       language: nextLanguage || language,
+      home_country_code: nextHomeCountryCode || null,
     };
 
     setProfile(updatedProfile);
@@ -1785,7 +1978,7 @@ function App() {
         <div>
           <p className="eyebrow">Travel Map</p>
           <h1>
-            {mineVisits.length} {t(language, "countriesVisited")}
+            {visitState.mineSet.size} {t(language, "countriesVisited")}
           </h1>
         </div>
         <div className="top-actions">
@@ -1838,6 +2031,7 @@ function App() {
         <ProfileSettingsModal
           profile={profile}
           language={language}
+          countryOptions={countryOptions}
           onClose={() => setIsProfileOpen(false)}
           onSave={handleSaveUsername}
           onUploadAvatar={handleUploadAvatar}
@@ -1878,8 +2072,10 @@ function App() {
               collectedLandmarkSet={collectedLandmarkSet}
               language={language}
               animatedCountryCode={animatedCountryCode}
+              homeCountryCode={profile?.home_country_code}
               onSelectCountry={setSelectedCountry}
               onMarkVisited={handleMarkVisited}
+              onRemoveVisited={handleRemoveVisited}
               onCollectLandmark={handleCollectLandmark}
             />
           ) : (
@@ -1892,6 +2088,7 @@ function App() {
         <div className="panel-stack">
           <ProfilePanel profile={profile} language={language} />
           <GlobalPercentilePanel stats={globalStats} language={language} />
+          <BadgesPanel visitCount={visitState.mineSet.size} stats={globalStats} language={language} />
           {profile?.is_admin && <AdminStatsPanel stats={globalStats} language={language} />}
           <CountryPanel
             country={selectedCountry}
@@ -1899,6 +2096,7 @@ function App() {
             friendVisitMap={friendVisitMap}
             language={language}
             onMarkVisited={handleMarkVisited}
+            onRemoveVisited={handleRemoveVisited}
             isSaving={isSavingVisit}
           />
           {profile && (

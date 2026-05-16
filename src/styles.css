@@ -238,12 +238,12 @@ button:disabled {
   width: 100%;
   height: 100%;
   min-height: calc(100dvh - 94px);
-  background: #bfe3f4;
+  background: #a9daf2;
 }
 
 .leaflet-container {
   font-family: inherit;
-  background: #bfe3f4;
+  background: #a9daf2;
 }
 
 .leaflet-tile-pane {
@@ -255,10 +255,10 @@ button:disabled {
   inset: 0;
   z-index: 250;
   pointer-events: none;
-  opacity: 0.28;
+  opacity: 0.2;
   mix-blend-mode: multiply;
   background:
-    linear-gradient(110deg, rgba(56, 189, 248, 0.28), rgba(186, 230, 253, 0.08) 38%, rgba(14, 165, 233, 0.2) 72%),
+    linear-gradient(110deg, rgba(14, 165, 233, 0.26), rgba(186, 230, 253, 0.08) 38%, rgba(2, 132, 199, 0.18) 72%),
     repeating-linear-gradient(
       128deg,
       rgba(255, 255, 255, 0.16) 0,
@@ -350,35 +350,63 @@ button:disabled {
   background: #172033;
 }
 
+.home-country-marker {
+  border: 0;
+  background: transparent;
+}
+
+.home-country-dot {
+  display: inline-grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 2px solid #ffffff;
+  border-radius: 999px;
+  color: #0f766e;
+  background: rgba(240, 253, 250, 0.96);
+  box-shadow:
+    0 8px 18px rgba(15, 23, 42, 0.2),
+    0 0 0 5px rgba(20, 184, 166, 0.12);
+  font-size: 1rem;
+  font-weight: 900;
+}
+
 .landmark-marker {
   border: 0;
   background: transparent;
 }
 
-.landmark-marker-image {
-  display: inline-grid;
-  width: 42px;
-  height: 42px;
-  place-items: center;
+.landmark-marker-photo {
+  display: block;
+  width: 46px;
+  height: 46px;
+  overflow: hidden;
   border: 0;
-  background: transparent;
-  filter: drop-shadow(0 5px 7px rgba(15, 23, 42, 0.28));
-  font-size: 2rem;
-  line-height: 1;
+  border-radius: 10px;
+  background: #ffffff;
+  object-fit: cover;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.22);
   transition:
-    filter 140ms ease,
+    box-shadow 140ms ease,
     transform 140ms ease;
 }
 
-.landmark-marker-image:hover {
-  filter: drop-shadow(0 8px 12px rgba(15, 23, 42, 0.34));
+.landmark-marker-photo:hover {
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.28);
   transform: scale(1.12) translateY(-1px);
 }
 
-.landmark-marker-image.is-collected {
-  filter:
-    drop-shadow(0 5px 7px rgba(15, 23, 42, 0.24))
-    saturate(1.08);
+.landmark-marker-photo.is-collected {
+  box-shadow:
+    0 0 0 2px rgba(20, 184, 166, 0.5),
+    0 8px 18px rgba(15, 23, 42, 0.22);
+}
+
+.landmark-marker-fallback {
+  display: inline-grid;
+  place-items: center;
+  color: #0f766e;
+  font-weight: 900;
 }
 
 .swatch {
@@ -623,6 +651,46 @@ button:disabled {
   font-weight: 800;
 }
 
+.badges-panel {
+  gap: 12px;
+}
+
+.badge-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.badge-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 9px;
+  padding: 10px;
+  border: 1px solid #dbe3ed;
+  border-radius: 8px;
+  color: #64748b;
+  background: #f8fafc;
+}
+
+.badge-card.is-unlocked {
+  border-color: #fbbf24;
+  color: #92400e;
+  background: #fffbeb;
+}
+
+.badge-card h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 0.9rem;
+  line-height: 1.25;
+}
+
+.badge-card p {
+  margin: 2px 0 0;
+  color: inherit;
+  font-size: 0.78rem;
+  line-height: 1.3;
+}
+
 .admin-panel {
   border-color: #bfdbfe;
   background: #eff6ff;
@@ -689,6 +757,14 @@ button:disabled {
 .landmark-popup-content {
   display: grid;
   gap: 10px;
+}
+
+.landmark-popup-photo {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 8px;
+  object-fit: cover;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
 }
 
 .landmark-popup-title {
@@ -837,7 +913,7 @@ button:disabled {
 
 .landmark-card {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: 112px minmax(0, 1fr);
   gap: 14px;
   padding: 16px;
   border: 1px solid #dbe3ed;
@@ -850,15 +926,22 @@ button:disabled {
   background: #f0fdfa;
 }
 
-.landmark-icon {
-  display: grid;
-  width: 56px;
-  height: 56px;
-  place-items: center;
-  border: 1px solid #dbe3ed;
+.landmark-card-photo {
+  width: 112px;
+  height: 112px;
+  border: 0;
   border-radius: 8px;
   background: #ffffff;
+  object-fit: cover;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.12);
+}
+
+.landmark-card-fallback {
+  display: grid;
+  place-items: center;
+  color: #0f766e;
   font-size: 1.8rem;
+  font-weight: 900;
 }
 
 .landmark-card-body {
@@ -884,6 +967,13 @@ button:disabled {
 .landmark-card-heading p,
 .landmark-description {
   font-size: 0.9rem;
+}
+
+.landmark-action-button {
+  width: 100%;
+  min-height: 42px;
+  padding: 0 14px;
+  font-size: 0.92rem;
 }
 
 .collection-status {
@@ -929,6 +1019,15 @@ button:disabled {
   font-weight: 800;
 }
 
+.profile-home-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 0.82rem;
+}
+
 .profile-summary strong {
   color: #0f172a;
   font-size: 1rem;
@@ -947,6 +1046,17 @@ button:disabled {
   background: #ffffff;
   font-weight: 800;
   cursor: pointer;
+}
+
+.danger-action {
+  border-color: #fecaca;
+  color: #991b1b;
+  background: #fff1f2;
+}
+
+.danger-action:hover:not(:disabled) {
+  border-color: #fca5a5;
+  background: #ffe4e6;
 }
 
 .secondary-action input {
@@ -1054,6 +1164,15 @@ button:disabled {
 
   .landmark-grid {
     grid-template-columns: 1fr;
+  }
+
+  .landmark-card {
+    grid-template-columns: 88px minmax(0, 1fr);
+  }
+
+  .landmark-card-photo {
+    width: 88px;
+    height: 88px;
   }
 
   .legend {
