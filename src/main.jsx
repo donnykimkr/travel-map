@@ -15,7 +15,8 @@ import {
 
 const WORLD_GEOJSON_URL = "/countries.geojson";
 const MAX_AVATAR_SIZE = 2 * 1024 * 1024;
-const LANDMARK_ZOOM_THRESHOLD = 5;
+const COUNTRY_DETAIL_ZOOM_THRESHOLD = 5;
+const LANDMARK_ZOOM_THRESHOLD = 8;
 const LANDMARKS = [
   {
     id: "statue-of-liberty",
@@ -221,12 +222,12 @@ function createAvatarIcon(friends) {
 function createLandmarkIcon(landmark, collected) {
   return L.divIcon({
     className: "landmark-marker",
-    html: `<span class="landmark-marker-pin ${collected ? "is-collected" : ""}" aria-label="${escapeHtml(
+    html: `<span class="landmark-marker-image ${collected ? "is-collected" : ""}" aria-label="${escapeHtml(
       landmark.name,
-    )}"><span class="landmark-marker-core"></span></span>`,
-    iconSize: [28, 34],
-    iconAnchor: [14, 30],
-    popupAnchor: [0, -28],
+    )}">${escapeHtml(landmark.icon)}</span>`,
+    iconSize: [42, 42],
+    iconAnchor: [21, 21],
+    popupAnchor: [0, -22],
   });
 }
 
@@ -398,6 +399,7 @@ function LandmarkMarkers({ landmarks, collectedSet, onCollect }) {
             <span className={`collection-status ${collected ? "collected" : ""}`}>
               {collected ? "Collected" : "Not visited"}
             </span>
+            <p>{landmark.description}</p>
             <button className="popup-button" onClick={() => onCollect(landmark.id)} disabled={collected}>
               {collected ? "Visited" : "Mark as visited"}
             </button>
@@ -425,6 +427,7 @@ function TravelMap({
 
   const visitedMine = visits.mineSet;
   const visitedFriend = visits.friendSet;
+  const countryDetailMode = zoom >= COUNTRY_DETAIL_ZOOM_THRESHOLD;
   const landmarkMode = zoom >= LANDMARK_ZOOM_THRESHOLD;
 
   const styleFeature = useCallback(
@@ -434,11 +437,13 @@ function TravelMap({
       const friend = visitedFriend.has(code);
       const selected = selectedCountry?.code === code;
 
-      if (landmarkMode) {
+      if (countryDetailMode) {
         return {
           color: selected ? "#475569" : "#cbd5e1",
           weight: selected ? 1.2 : 0.55,
+          opacity: 0.15,
           fill: false,
+          fillColor: "transparent",
           fillOpacity: 0,
           lineCap: "round",
           lineJoin: "round",
@@ -492,12 +497,16 @@ function TravelMap({
         renderer: countryRenderer,
       };
     },
-    [countryRenderer, landmarkMode, selectedCountry?.code, visitedFriend, visitedMine],
+    [countryDetailMode, countryRenderer, selectedCountry?.code, visitedFriend, visitedMine],
   );
 
   useEffect(() => {
-    geoJsonRef.current?.resetStyle();
-  }, [styleFeature]);
+    geoJsonRef.current?.eachLayer((layer) => {
+      if (layer.feature) {
+        layer.setStyle(styleFeature(layer.feature));
+      }
+    });
+  }, [countryDetailMode, styleFeature]);
 
   const onEachFeature = useCallback(
     (feature, layer) => {
@@ -513,9 +522,11 @@ function TravelMap({
         mouseover: () => {
           const style = styleFeature(feature);
           layer.setStyle({
-            weight: landmarkMode ? 1.2 : 2,
-            fill: !landmarkMode,
-            fillOpacity: landmarkMode ? 0 : Math.max(style.fillOpacity, 0.72),
+            weight: countryDetailMode ? 1.2 : 2,
+            opacity: countryDetailMode ? 0.2 : style.opacity || 1,
+            fill: !countryDetailMode,
+            fillColor: countryDetailMode ? "transparent" : style.fillColor,
+            fillOpacity: countryDetailMode ? 0 : Math.max(style.fillOpacity, 0.72),
           });
         },
         mouseout: () => {
@@ -545,7 +556,7 @@ function TravelMap({
         return wrapper;
       });
     },
-    [friendVisitMap, landmarkMode, onMarkVisited, onSelectCountry, styleFeature, visitedMine],
+    [countryDetailMode, friendVisitMap, onMarkVisited, onSelectCountry, styleFeature, visitedMine],
   );
 
   const handleZoomChange = useCallback((nextZoom) => {
@@ -574,13 +585,15 @@ function TravelMap({
         noWrap
       />
       <GeoJSON
-        key={`${visitedMine.size}-${visitedFriend.size}`}
+        key={`${visitedMine.size}-${visitedFriend.size}-${countryDetailMode ? "detail" : "world"}`}
         ref={geoJsonRef}
         data={geojson}
         style={styleFeature}
         onEachFeature={onEachFeature}
       />
-      <FriendAvatarMarkers geojson={geojson} friendVisitMap={friendVisitMap} onSelectCountry={onSelectCountry} />
+      {!countryDetailMode && (
+        <FriendAvatarMarkers geojson={geojson} friendVisitMap={friendVisitMap} onSelectCountry={onSelectCountry} />
+      )}
       {landmarkMode && (
         <LandmarkMarkers
           landmarks={landmarks}
@@ -588,7 +601,7 @@ function TravelMap({
           onCollect={onCollectLandmark}
         />
       )}
-      {!landmarkMode && <MapLegend />}
+      {!countryDetailMode && <MapLegend />}
     </MapContainer>
   );
 }
