@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { GeoJSON, MapContainer, Marker, TileLayer, useMap } from "react-leaflet";
-import { Check, ImagePlus, LogOut, Plus, RefreshCw, Search, Settings, X } from "lucide-react";
+import { Check, ImagePlus, Landmark, LogOut, Plus, RefreshCw, Search, Settings, X } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "./styles.css";
@@ -15,6 +15,26 @@ import {
 
 const WORLD_GEOJSON_URL = "/countries.geojson";
 const MAX_AVATAR_SIZE = 2 * 1024 * 1024;
+const LANDMARKS = [
+  {
+    id: "statue-of-liberty",
+    icon: "🗽",
+    name: "Statue of Liberty",
+    country: "United States",
+    city: "New York",
+    description:
+      "A famous symbol of freedom and one of the most iconic landmarks in the United States.",
+  },
+  {
+    id: "gyeongbokgung-palace",
+    icon: "🏯",
+    name: "Gyeongbokgung Palace",
+    country: "South Korea",
+    city: "Seoul",
+    description:
+      "A historic royal palace from the Joseon Dynasty and one of Seoul’s most important cultural landmarks.",
+  },
+];
 
 function FitWorld() {
   const map = useMap();
@@ -673,6 +693,61 @@ function ActivityFeed({ activities }) {
   );
 }
 
+function LandmarkCollectionModal({ landmarks, collectedSet, onCollect, onClose }) {
+  return (
+    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="landmark-title">
+      <section className="collection-modal">
+        <div className="modal-title-row">
+          <div>
+            <p className="eyebrow">Collection</p>
+            <h2 id="landmark-title">Landmark Collection</h2>
+            <p>Collect memorable places as you build your travel story.</p>
+          </div>
+          <button type="button" className="icon-button" onClick={onClose} title="Close" aria-label="Close">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="landmark-grid">
+          {landmarks.map((landmark) => {
+            const collected = collectedSet.has(landmark.id);
+
+            return (
+              <article className={`landmark-card ${collected ? "is-collected" : ""}`} key={landmark.id}>
+                <div className="landmark-icon" aria-hidden="true">
+                  {landmark.icon}
+                </div>
+                <div className="landmark-card-body">
+                  <div className="landmark-card-heading">
+                    <div>
+                      <h3>{landmark.name}</h3>
+                      <p>
+                        {landmark.city}, {landmark.country}
+                      </p>
+                    </div>
+                    <span className={`collection-status ${collected ? "collected" : ""}`}>
+                      {collected ? "Collected" : "Not visited"}
+                    </span>
+                  </div>
+                  <p className="landmark-description">{landmark.description}</p>
+                  <button
+                    className={collected ? "secondary-action" : "primary-action"}
+                    onClick={() => onCollect(landmark.id)}
+                    disabled={collected}
+                  >
+                    <Check size={17} />
+                    {collected ? "Visited" : "Mark as visited"}
+                  </button>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+    </div>
+  );
+}
+
 function App() {
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
@@ -688,6 +763,8 @@ function App() {
   const [isSavingVisit, setIsSavingVisit] = useState(false);
   const [isAddingFriend, setIsAddingFriend] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isLandmarkOpen, setIsLandmarkOpen] = useState(false);
+  const [landmarkVisits, setLandmarkVisits] = useState([]);
 
   const countryNames = useMemo(() => {
     const map = new Map();
@@ -761,6 +838,15 @@ function App() {
       return a.username.localeCompare(b.username);
     });
   }, [friendVisits, friends, mineVisits, profile]);
+
+  const collectedLandmarkSet = useMemo(() => {
+    const userId = session?.user?.id;
+    return new Set(
+      landmarkVisits
+        .filter((visit) => visit.user_id === userId)
+        .map((visit) => visit.landmark_id),
+    );
+  }, [landmarkVisits, session?.user?.id]);
 
   const hydrateProfile = useCallback(async (activeSession) => {
     if (!supabase || !activeSession?.user) {
@@ -1051,6 +1137,21 @@ function App() {
     return { data };
   };
 
+  const handleCollectLandmark = (landmarkId) => {
+    const userId = session?.user?.id;
+    if (!userId || collectedLandmarkSet.has(landmarkId)) return;
+
+    setLandmarkVisits((current) => [
+      ...current,
+      {
+        id: `local-${userId}-${landmarkId}`,
+        user_id: userId,
+        landmark_id: landmarkId,
+        created_at: new Date().toISOString(),
+      },
+    ]);
+  };
+
   const signOut = async () => {
     if (!supabase) return;
     await supabase.auth.signOut();
@@ -1068,6 +1169,10 @@ function App() {
           <h1>{mineVisits.length} countries visited</h1>
         </div>
         <div className="top-actions">
+          <button className="landmark-button" onClick={() => setIsLandmarkOpen(true)}>
+            <Landmark size={17} />
+            <span>Landmark Collection</span>
+          </button>
           <button className="icon-button" onClick={refreshSocialData} title="Refresh" aria-label="Refresh">
             <RefreshCw size={18} />
           </button>
@@ -1107,6 +1212,15 @@ function App() {
           onClose={() => setIsProfileOpen(false)}
           onSave={handleSaveUsername}
           onUploadAvatar={handleUploadAvatar}
+        />
+      )}
+
+      {isLandmarkOpen && (
+        <LandmarkCollectionModal
+          landmarks={LANDMARKS}
+          collectedSet={collectedLandmarkSet}
+          onCollect={handleCollectLandmark}
+          onClose={() => setIsLandmarkOpen(false)}
         />
       )}
 

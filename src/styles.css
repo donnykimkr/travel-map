@@ -163,6 +163,24 @@ button:disabled {
   background: #d1fae5;
 }
 
+.landmark-button {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  gap: 7px;
+  padding: 0 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  color: #243244;
+  background: #ffffff;
+  font-weight: 800;
+}
+
+.landmark-button:hover {
+  border-color: #94a3b8;
+  background: #f8fafc;
+}
+
 .workspace {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 360px;
@@ -599,6 +617,104 @@ button:disabled {
   width: min(460px, 100%);
 }
 
+.collection-modal {
+  display: grid;
+  width: min(820px, 100%);
+  max-height: min(760px, calc(100dvh - 40px));
+  gap: 18px;
+  overflow-y: auto;
+  padding: 22px;
+  border: 1px solid #dbe3ed;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.24);
+}
+
+.collection-modal h2 {
+  margin: 4px 0 0;
+  font-size: 1.35rem;
+}
+
+.collection-modal p {
+  margin: 6px 0 0;
+  color: #64748b;
+  line-height: 1.45;
+}
+
+.landmark-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.landmark-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid #dbe3ed;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.landmark-card.is-collected {
+  border-color: #99f6e4;
+  background: #f0fdfa;
+}
+
+.landmark-icon {
+  display: grid;
+  width: 56px;
+  height: 56px;
+  place-items: center;
+  border: 1px solid #dbe3ed;
+  border-radius: 8px;
+  background: #ffffff;
+  font-size: 1.8rem;
+}
+
+.landmark-card-body {
+  display: grid;
+  min-width: 0;
+  gap: 12px;
+}
+
+.landmark-card-heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.landmark-card h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1rem;
+  line-height: 1.25;
+}
+
+.landmark-card-heading p,
+.landmark-description {
+  font-size: 0.9rem;
+}
+
+.collection-status {
+  flex: 0 0 auto;
+  padding: 5px 8px;
+  border: 1px solid #dbe3ed;
+  border-radius: 999px;
+  color: #64748b;
+  background: #ffffff;
+  font-size: 0.74rem;
+  font-weight: 900;
+}
+
+.collection-status.collected {
+  border-color: #5eead4;
+  color: #0f766e;
+  background: #ccfbf1;
+}
+
 .modal-title-row {
   display: flex;
   align-items: start;
@@ -730,6 +846,14 @@ button:disabled {
   }
 
   .panel-stack {
+    grid-template-columns: 1fr;
+  }
+
+  .landmark-button span {
+    display: none;
+  }
+
+  .landmark-grid {
     grid-template-columns: 1fr;
   }
 
