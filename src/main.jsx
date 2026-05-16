@@ -9,7 +9,6 @@ import { hasSupabaseConfig, supabase } from "./supabase";
 import {
   CONTINENT_COUNTRY_CODES,
   CONTINENT_ORDER,
-  COUNTRY_TO_CONTINENT,
   countryCodeFromFeature,
   countryFlag,
   countryNameFromFeature,
@@ -19,7 +18,6 @@ import {
 
 const WORLD_GEOJSON_URL = "/countries.geojson";
 const MAX_AVATAR_SIZE = 2 * 1024 * 1024;
-const COUNTRY_DETAIL_ZOOM_THRESHOLD = 5;
 const LANDMARK_ZOOM_THRESHOLD = 8;
 const DEFAULT_LANGUAGE = "en";
 const LANGUAGE_OPTIONS = [
@@ -291,10 +289,6 @@ function ZoomObserver({ onZoomChange }) {
   return null;
 }
 
-function OceanWaveOverlay() {
-  return <div className="ocean-wave-overlay" aria-hidden="true" />;
-}
-
 function makeFriendCode() {
   return `TRIP-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
 }
@@ -415,6 +409,85 @@ function getFeatureBoundsCenter(feature) {
   const lat = (Math.min(...latitudes) + Math.max(...latitudes)) / 2;
 
   return [lat, Math.max(-179.5, Math.min(179.5, lng))];
+}
+
+function getIsoA2FromFeature(feature) {
+  const props = feature?.properties || {};
+  const iso = props.ISO_A2 || props.iso_a2 || props["ISO3166-1-Alpha-2"];
+  return /^[A-Z]{2}$/i.test(String(iso || "")) ? normalizeCountryCode(iso) : "";
+}
+
+function getCountryStyle(feature, context) {
+  const code = countryCodeFromFeature(feature);
+  const isoA2 = getIsoA2FromFeature(feature);
+  const selected = context.selectedCountryCode === code;
+  const isHomeCountry = Boolean(context.homeCountryCode && isoA2 === context.homeCountryCode);
+  const isUserVisited = context.visitedMine.has(code);
+  const isFriendVisited = context.visitedFriend.has(code);
+
+  const base = {
+    lineCap: "round",
+    lineJoin: "round",
+    renderer: context.renderer,
+  };
+
+  if (isHomeCountry) {
+    return {
+      ...base,
+      color: isUserVisited || isFriendVisited ? "#9f1239" : "#be123c",
+      weight: selected ? 2.2 : 1.25,
+      opacity: selected ? 0.72 : 0.42,
+      fill: true,
+      fillColor: isUserVisited || isFriendVisited ? "#fb7185" : "#fda4af",
+      fillOpacity: selected ? 0.42 : isUserVisited || isFriendVisited ? 0.34 : 0.24,
+    };
+  }
+
+  if (isUserVisited && isFriendVisited) {
+    return {
+      ...base,
+      color: "#b45309",
+      weight: selected ? 1.5 : 0.75,
+      opacity: selected ? 0.5 : 0.26,
+      fill: true,
+      fillColor: "#f59e0b",
+      fillOpacity: selected ? 0.34 : 0.3,
+    };
+  }
+
+  if (isUserVisited) {
+    return {
+      ...base,
+      color: "#0369a1",
+      weight: selected ? 1.5 : 0.7,
+      opacity: selected ? 0.46 : 0.24,
+      fill: true,
+      fillColor: "#38bdf8",
+      fillOpacity: selected ? 0.28 : 0.24,
+    };
+  }
+
+  if (isFriendVisited) {
+    return {
+      ...base,
+      color: "#059669",
+      weight: selected ? 1.45 : 0.7,
+      opacity: selected ? 0.42 : 0.22,
+      fill: true,
+      fillColor: "#6ee7b7",
+      fillOpacity: selected ? 0.24 : 0.2,
+    };
+  }
+
+  return {
+    ...base,
+    color: selected ? "#64748b" : "#cbd5e1",
+    weight: selected ? 1.25 : 0.45,
+    opacity: selected ? 0.34 : 0.14,
+    fill: true,
+    fillColor: "#ffffff",
+    fillOpacity: selected ? 0.08 : 0.02,
+  };
 }
 
 function LoginScreen() {
@@ -597,86 +670,22 @@ function TravelMap({
   const visitedMine = visits.mineSet;
   const visitedFriend = visits.friendSet;
   const homeCode = normalizeCountryCode(homeCountryCode);
-  const countryDetailMode = zoom >= COUNTRY_DETAIL_ZOOM_THRESHOLD;
   const landmarkMode = zoom >= LANDMARK_ZOOM_THRESHOLD;
   const tileLayer = TILE_LAYERS[language] || TILE_LAYERS.en;
 
+  useEffect(() => {
+    console.log("Home country:", homeCode);
+  }, [homeCode]);
+
   const styleFeature = useCallback(
-    (feature) => {
-      const code = countryCodeFromFeature(feature);
-      const mine = visitedMine.has(code);
-      const friend = visitedFriend.has(code);
-      const home = homeCode === code;
-      const selected = selectedCountry?.code === code;
-
-      if (home) {
-        return {
-          color: mine || friend ? "#9f1239" : "#be123c",
-          weight: selected ? 2.2 : 1.25,
-          opacity: selected ? 0.72 : 0.42,
-          fill: true,
-          fillColor: mine || friend ? "#fb7185" : "#fda4af",
-          fillOpacity: selected ? 0.42 : mine || friend ? 0.34 : 0.24,
-          lineCap: "round",
-          lineJoin: "round",
-          renderer: countryRenderer,
-        };
-      }
-
-      if (mine && friend) {
-        return {
-          color: "#b45309",
-          weight: selected ? 1.5 : 0.75,
-          opacity: selected ? 0.5 : 0.26,
-          fill: true,
-          fillColor: "#f59e0b",
-          fillOpacity: selected ? 0.34 : 0.3,
-          lineCap: "round",
-          lineJoin: "round",
-          renderer: countryRenderer,
-        };
-      }
-
-      if (mine) {
-        return {
-          color: "#0369a1",
-          weight: selected ? 1.5 : 0.7,
-          opacity: selected ? 0.46 : 0.24,
-          fill: true,
-          fillColor: "#38bdf8",
-          fillOpacity: selected ? 0.28 : 0.24,
-          lineCap: "round",
-          lineJoin: "round",
-          renderer: countryRenderer,
-        };
-      }
-
-      if (friend) {
-        return {
-          color: "#059669",
-          weight: selected ? 1.45 : 0.7,
-          opacity: selected ? 0.42 : 0.22,
-          fill: true,
-          fillColor: "#6ee7b7",
-          fillOpacity: selected ? 0.24 : 0.2,
-          lineCap: "round",
-          lineJoin: "round",
-          renderer: countryRenderer,
-        };
-      }
-
-      return {
-        color: selected ? "#64748b" : "#cbd5e1",
-        weight: selected ? 1.25 : 0.45,
-        opacity: selected ? 0.34 : 0.14,
-        fill: true,
-        fillColor: "#ffffff",
-        fillOpacity: selected ? 0.08 : 0.02,
-        lineCap: "round",
-        lineJoin: "round",
+    (feature) =>
+      getCountryStyle(feature, {
+        homeCountryCode: homeCode,
+        selectedCountryCode: selectedCountry?.code,
+        visitedMine,
+        visitedFriend,
         renderer: countryRenderer,
-      };
-    },
+      }),
     [countryRenderer, homeCode, selectedCountry?.code, visitedFriend, visitedMine],
   );
 
@@ -818,7 +827,6 @@ function TravelMap({
         subdomains={tileLayer.subdomains}
         noWrap={false}
       />
-      <OceanWaveOverlay />
       <GeoJSON
         key={`${visitedMine.size}-${visitedFriend.size}-${language}`}
         ref={geoJsonRef}
@@ -826,9 +834,7 @@ function TravelMap({
         style={styleFeature}
         onEachFeature={onEachFeature}
       />
-      {!countryDetailMode && (
-        <FriendAvatarMarkers geojson={geojson} friendVisitMap={friendVisitMap} onSelectCountry={onSelectCountry} />
-      )}
+      <FriendAvatarMarkers geojson={geojson} friendVisitMap={friendVisitMap} onSelectCountry={onSelectCountry} />
       {landmarkMode && (
         <LandmarkMarkers
           landmarks={landmarks}
@@ -837,7 +843,7 @@ function TravelMap({
           onCollect={onCollectLandmark}
         />
       )}
-      {!countryDetailMode && <MapLegend language={language} />}
+      <MapLegend language={language} />
     </MapContainer>
   );
 }

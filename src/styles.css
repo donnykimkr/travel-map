@@ -238,68 +238,16 @@ button:disabled {
   width: 100%;
   height: 100%;
   min-height: calc(100dvh - 94px);
-  background: #8fd0ee;
+  background: #d4edf7;
 }
 
 .leaflet-container {
   font-family: inherit;
-  background: #8fd0ee;
+  background: #d4edf7;
 }
 
 .leaflet-tile-pane {
-  filter: saturate(0.92) contrast(0.96) brightness(1.04);
-}
-
-.ocean-wave-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 250;
-  pointer-events: none;
-  opacity: 0.42;
-  mix-blend-mode: soft-light;
-  background:
-    linear-gradient(110deg, rgba(14, 165, 233, 0.5), rgba(186, 230, 253, 0.12) 36%, rgba(2, 132, 199, 0.36) 72%),
-    repeating-linear-gradient(
-      128deg,
-      rgba(255, 255, 255, 0.34) 0,
-      rgba(255, 255, 255, 0.34) 1px,
-      rgba(255, 255, 255, 0) 1px,
-      rgba(255, 255, 255, 0) 22px
-    ),
-    repeating-linear-gradient(
-      28deg,
-      rgba(14, 165, 233, 0.18) 0,
-      rgba(14, 165, 233, 0.18) 1px,
-      rgba(14, 165, 233, 0) 1px,
-      rgba(14, 165, 233, 0) 34px
-    );
-  background-size:
-    220% 220%,
-    190px 190px,
-    260px 260px;
-  animation: ocean-drift 16s linear infinite;
-}
-
-@keyframes ocean-drift {
-  from {
-    background-position:
-      0% 50%,
-      0 0,
-      0 0;
-  }
-
-  to {
-    background-position:
-      100% 50%,
-      190px 90px,
-      -260px 120px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .ocean-wave-overlay {
-    animation: none;
-  }
+  filter: saturate(0.98) contrast(0.98) brightness(1.02);
 }
 
 .legend {
