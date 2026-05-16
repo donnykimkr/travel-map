@@ -34,9 +34,10 @@ const TILE_LAYERS = {
     subdomains: "abcd",
   },
   ko: {
-    url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-    subdomains: "abc",
+    url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    subdomains: "abcd",
   },
 };
 const TEXT = {
@@ -257,6 +258,10 @@ function ZoomObserver({ onZoomChange }) {
   }, [map, onZoomChange]);
 
   return null;
+}
+
+function OceanWaveOverlay() {
+  return <div className="ocean-wave-overlay" aria-hidden="true" />;
 }
 
 function makeFriendCode() {
@@ -542,6 +547,7 @@ function TravelMap({
   landmarks,
   collectedLandmarkSet,
   language,
+  animatedCountryCode,
   onSelectCountry,
   onMarkVisited,
   onCollectLandmark,
@@ -563,68 +569,14 @@ function TravelMap({
       const friend = visitedFriend.has(code);
       const selected = selectedCountry?.code === code;
 
-      if (countryDetailMode) {
-        if (mine && friend) {
-          return {
-            color: "#92400e",
-            weight: selected ? 1.4 : 0.7,
-            opacity: selected ? 0.42 : 0.24,
-            fill: true,
-            fillColor: "#f59e0b",
-            fillOpacity: selected ? 0.25 : 0.22,
-            lineCap: "round",
-            lineJoin: "round",
-            renderer: countryRenderer,
-          };
-        }
-
-        if (mine) {
-          return {
-            color: "#075985",
-            weight: selected ? 1.4 : 0.7,
-            opacity: selected ? 0.4 : 0.22,
-            fill: true,
-            fillColor: "#0284c7",
-            fillOpacity: selected ? 0.24 : 0.2,
-            lineCap: "round",
-            lineJoin: "round",
-            renderer: countryRenderer,
-          };
-        }
-
-        if (friend) {
-          return {
-            color: "#047857",
-            weight: selected ? 1.3 : 0.65,
-            opacity: selected ? 0.36 : 0.2,
-            fill: true,
-            fillColor: "#34d399",
-            fillOpacity: selected ? 0.22 : 0.18,
-            lineCap: "round",
-            lineJoin: "round",
-            renderer: countryRenderer,
-          };
-        }
-
-        return {
-          color: selected ? "#475569" : "#cbd5e1",
-          weight: selected ? 1.2 : 0.55,
-          opacity: 0.15,
-          fill: true,
-          fillColor: "#f8fafc",
-          fillOpacity: selected ? 0.08 : 0.025,
-          lineCap: "round",
-          lineJoin: "round",
-          renderer: countryRenderer,
-        };
-      }
-
       if (mine && friend) {
         return {
-          color: "#92400e",
-          weight: selected ? 2.5 : 1.2,
+          color: "#b45309",
+          weight: selected ? 1.5 : 0.75,
+          opacity: selected ? 0.5 : 0.26,
+          fill: true,
           fillColor: "#f59e0b",
-          fillOpacity: 0.82,
+          fillOpacity: selected ? 0.34 : 0.3,
           lineCap: "round",
           lineJoin: "round",
           renderer: countryRenderer,
@@ -633,10 +585,12 @@ function TravelMap({
 
       if (mine) {
         return {
-          color: "#075985",
-          weight: selected ? 2.5 : 1,
-          fillColor: "#0284c7",
-          fillOpacity: 0.78,
+          color: "#0369a1",
+          weight: selected ? 1.5 : 0.7,
+          opacity: selected ? 0.46 : 0.24,
+          fill: true,
+          fillColor: "#38bdf8",
+          fillOpacity: selected ? 0.28 : 0.24,
           lineCap: "round",
           lineJoin: "round",
           renderer: countryRenderer,
@@ -645,10 +599,12 @@ function TravelMap({
 
       if (friend) {
         return {
-          color: "#047857",
-          weight: selected ? 2.5 : 1,
-          fillColor: "#34d399",
-          fillOpacity: 0.42,
+          color: "#059669",
+          weight: selected ? 1.45 : 0.7,
+          opacity: selected ? 0.42 : 0.22,
+          fill: true,
+          fillColor: "#6ee7b7",
+          fillOpacity: selected ? 0.24 : 0.2,
           lineCap: "round",
           lineJoin: "round",
           renderer: countryRenderer,
@@ -656,16 +612,18 @@ function TravelMap({
       }
 
       return {
-        color: selected ? "#111827" : "#94a3b8",
-        weight: selected ? 2.2 : 0.6,
-        fillColor: "#f8fafc",
-        fillOpacity: selected ? 0.72 : 0.5,
+        color: selected ? "#64748b" : "#cbd5e1",
+        weight: selected ? 1.25 : 0.45,
+        opacity: selected ? 0.34 : 0.14,
+        fill: true,
+        fillColor: "#ffffff",
+        fillOpacity: selected ? 0.08 : 0.02,
         lineCap: "round",
         lineJoin: "round",
         renderer: countryRenderer,
       };
     },
-    [countryDetailMode, countryRenderer, selectedCountry?.code, visitedFriend, visitedMine],
+    [countryRenderer, selectedCountry?.code, visitedFriend, visitedMine],
   );
 
   useEffect(() => {
@@ -674,7 +632,48 @@ function TravelMap({
         layer.setStyle(styleFeature(layer.feature));
       }
     });
-  }, [zoom, styleFeature]);
+  }, [styleFeature]);
+
+  useEffect(() => {
+    if (!animatedCountryCode) return undefined;
+
+    let targetLayer = null;
+    geoJsonRef.current?.eachLayer((layer) => {
+      if (countryCodeFromFeature(layer.feature) === animatedCountryCode) {
+        targetLayer = layer;
+      }
+    });
+
+    if (!targetLayer) return undefined;
+
+    const targetStyle = styleFeature(targetLayer.feature);
+    const start = performance.now();
+    const duration = 560;
+    let frame = 0;
+
+    const animate = (time) => {
+      const progress = Math.min((time - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+
+      targetLayer.setStyle({
+        ...targetStyle,
+        weight: targetStyle.weight + (1 - eased) * 1.4,
+        opacity: Math.min((targetStyle.opacity || 0.2) + (1 - eased) * 0.22, 0.62),
+        fillOpacity: targetStyle.fillOpacity * eased,
+      });
+
+      if (progress < 1) {
+        frame = requestAnimationFrame(animate);
+      } else {
+        targetLayer.setStyle(targetStyle);
+      }
+    };
+
+    targetLayer.setStyle({ ...targetStyle, fillOpacity: 0 });
+    frame = requestAnimationFrame(animate);
+
+    return () => cancelAnimationFrame(frame);
+  }, [animatedCountryCode, styleFeature]);
 
   const onEachFeature = useCallback(
     (feature, layer) => {
@@ -690,11 +689,11 @@ function TravelMap({
         mouseover: () => {
           const style = styleFeature(feature);
           layer.setStyle({
-            weight: countryDetailMode ? 1.2 : 2,
-            opacity: countryDetailMode ? 0.2 : style.opacity || 1,
+            weight: style.weight + 0.35,
+            opacity: Math.min((style.opacity || 0.2) + 0.18, 0.64),
             fill: true,
             fillColor: style.fillColor,
-            fillOpacity: countryDetailMode ? Math.max(style.fillOpacity, 0.2) : Math.max(style.fillOpacity, 0.72),
+            fillOpacity: Math.min(style.fillOpacity + 0.08, 0.38),
           });
         },
         mouseout: () => {
@@ -726,7 +725,7 @@ function TravelMap({
         return wrapper;
       });
     },
-    [countryDetailMode, friendVisitMap, language, onMarkVisited, onSelectCountry, styleFeature, visitedMine],
+    [friendVisitMap, language, onMarkVisited, onSelectCountry, styleFeature, visitedMine],
   );
 
   const handleZoomChange = useCallback((nextZoom) => {
@@ -750,14 +749,15 @@ function TravelMap({
       <FitWorld />
       <ZoomObserver onZoomChange={handleZoomChange} />
       <TileLayer
-        key={language}
+        key="minimal-light-map"
         attribution={tileLayer.attribution}
         url={tileLayer.url}
         subdomains={tileLayer.subdomains}
         noWrap
       />
+      <OceanWaveOverlay />
       <GeoJSON
-        key={`${visitedMine.size}-${visitedFriend.size}-${countryDetailMode ? "detail" : "world"}`}
+        key={`${visitedMine.size}-${visitedFriend.size}`}
         ref={geoJsonRef}
         data={geojson}
         style={styleFeature}
@@ -1269,6 +1269,7 @@ function App() {
   const [isCountryCollectionOpen, setIsCountryCollectionOpen] = useState(false);
   const [landmarkVisits, setLandmarkVisits] = useState([]);
   const [globalStats, setGlobalStats] = useState(null);
+  const [animatedCountryCode, setAnimatedCountryCode] = useState("");
 
   const language = getLanguage(profile);
 
@@ -1555,6 +1556,7 @@ function App() {
       if (!supabase || !userId || !country?.code || visitState.mineSet.has(country.code)) return;
 
       setIsSavingVisit(true);
+      setAnimatedCountryCode(country.code);
       setMineVisits((current) => [
         ...current,
         {
@@ -1573,6 +1575,7 @@ function App() {
 
       if (error && error.code !== "23505") {
         setNotice(error.message);
+        setAnimatedCountryCode("");
         setMineVisits((current) => current.filter((visit) => visit.id !== `optimistic-${country.code}`));
         setIsSavingVisit(false);
         return;
@@ -1584,6 +1587,7 @@ function App() {
       });
 
       setIsSavingVisit(false);
+      window.setTimeout(() => setAnimatedCountryCode(""), 720);
       refreshSocialData();
     },
     [refreshSocialData, session?.user?.id, visitState.mineSet],
@@ -1873,6 +1877,7 @@ function App() {
               landmarks={LANDMARKS}
               collectedLandmarkSet={collectedLandmarkSet}
               language={language}
+              animatedCountryCode={animatedCountryCode}
               onSelectCountry={setSelectedCountry}
               onMarkVisited={handleMarkVisited}
               onCollectLandmark={handleCollectLandmark}
