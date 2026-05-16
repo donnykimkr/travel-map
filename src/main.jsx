@@ -539,43 +539,6 @@ function FriendAvatarMarkers({ geojson, friendVisitMap, onSelectCountry }) {
   ));
 }
 
-function createHomeIcon() {
-  return L.divIcon({
-    className: "home-country-marker",
-    html: `<span class="home-country-dot" aria-label="Home country">⌂</span>`,
-    iconSize: [28, 28],
-    iconAnchor: [14, 14],
-  });
-}
-
-function HomeCountryMarker({ geojson, homeCountryCode, onSelectCountry }) {
-  const marker = useMemo(() => {
-    const code = normalizeCountryCode(homeCountryCode);
-    if (!code) return null;
-    const feature = (geojson?.features || []).find((item) => countryCodeFromFeature(item) === code);
-    if (!feature) return null;
-    const position = getFeatureBoundsCenter(feature);
-    if (!position) return null;
-    return {
-      code,
-      flag: countryFlag(code),
-      position,
-    };
-  }, [geojson, homeCountryCode]);
-
-  if (!marker) return null;
-
-  return (
-    <Marker
-      position={marker.position}
-      icon={createHomeIcon()}
-      eventHandlers={{
-        click: () => onSelectCountry({ code: marker.code, flag: marker.flag }),
-      }}
-    />
-  );
-}
-
 function LandmarkMarkers({ landmarks, collectedSet, language, onCollect }) {
   return landmarks.map((landmark) => {
     const collected = collectedSet.has(landmark.id);
@@ -633,6 +596,7 @@ function TravelMap({
 
   const visitedMine = visits.mineSet;
   const visitedFriend = visits.friendSet;
+  const homeCode = normalizeCountryCode(homeCountryCode);
   const countryDetailMode = zoom >= COUNTRY_DETAIL_ZOOM_THRESHOLD;
   const landmarkMode = zoom >= LANDMARK_ZOOM_THRESHOLD;
   const tileLayer = TILE_LAYERS[language] || TILE_LAYERS.en;
@@ -642,7 +606,22 @@ function TravelMap({
       const code = countryCodeFromFeature(feature);
       const mine = visitedMine.has(code);
       const friend = visitedFriend.has(code);
+      const home = homeCode === code;
       const selected = selectedCountry?.code === code;
+
+      if (home) {
+        return {
+          color: mine || friend ? "#9f1239" : "#be123c",
+          weight: selected ? 2.2 : 1.25,
+          opacity: selected ? 0.72 : 0.42,
+          fill: true,
+          fillColor: mine || friend ? "#fb7185" : "#fda4af",
+          fillOpacity: selected ? 0.42 : mine || friend ? 0.34 : 0.24,
+          lineCap: "round",
+          lineJoin: "round",
+          renderer: countryRenderer,
+        };
+      }
 
       if (mine && friend) {
         return {
@@ -698,7 +677,7 @@ function TravelMap({
         renderer: countryRenderer,
       };
     },
-    [countryRenderer, selectedCountry?.code, visitedFriend, visitedMine],
+    [countryRenderer, homeCode, selectedCountry?.code, visitedFriend, visitedMine],
   );
 
   useEffect(() => {
@@ -723,17 +702,19 @@ function TravelMap({
 
     const targetStyle = styleFeature(targetLayer.feature);
     const start = performance.now();
-    const duration = 560;
+    const duration = 900;
     let frame = 0;
 
     const animate = (time) => {
       const progress = Math.min((time - start) / duration, 1);
       const eased = 1 - Math.pow(1 - progress, 3);
+      const pulse = Math.sin(progress * Math.PI);
 
       targetLayer.setStyle({
         ...targetStyle,
-        weight: targetStyle.weight + (1 - eased) * 1.4,
-        opacity: Math.min((targetStyle.opacity || 0.2) + (1 - eased) * 0.22, 0.62),
+        color: "#0ea5e9",
+        weight: targetStyle.weight + pulse * 3.2,
+        opacity: Math.min((targetStyle.opacity || 0.2) + pulse * 0.58, 0.95),
         fillOpacity: targetStyle.fillOpacity * eased,
       });
 
@@ -744,7 +725,13 @@ function TravelMap({
       }
     };
 
-    targetLayer.setStyle({ ...targetStyle, fillOpacity: 0 });
+    targetLayer.setStyle({
+      ...targetStyle,
+      color: "#7dd3fc",
+      weight: targetStyle.weight + 2.4,
+      opacity: 0.88,
+      fillOpacity: 0,
+    });
     frame = requestAnimationFrame(animate);
 
     return () => cancelAnimationFrame(frame);
@@ -817,10 +804,7 @@ function TravelMap({
       zoom={2}
       minZoom={2}
       maxZoom={12}
-      maxBounds={[
-        [-85, -180],
-        [85, 180],
-      ]}
+      worldCopyJump
       className="map"
       zoomControl={false}
       preferCanvas
@@ -832,7 +816,7 @@ function TravelMap({
         attribution={tileLayer.attribution}
         url={tileLayer.url}
         subdomains={tileLayer.subdomains}
-        noWrap
+        noWrap={false}
       />
       <OceanWaveOverlay />
       <GeoJSON
@@ -842,7 +826,6 @@ function TravelMap({
         style={styleFeature}
         onEachFeature={onEachFeature}
       />
-      <HomeCountryMarker geojson={geojson} homeCountryCode={homeCountryCode} onSelectCountry={onSelectCountry} />
       {!countryDetailMode && (
         <FriendAvatarMarkers geojson={geojson} friendVisitMap={friendVisitMap} onSelectCountry={onSelectCountry} />
       )}
