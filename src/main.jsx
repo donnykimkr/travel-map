@@ -1,15 +1,19 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { GeoJSON, MapContainer, Marker, Popup, TileLayer, useMap, useMapEvents } from "react-leaflet";
-import { Check, ImagePlus, Landmark, LogOut, Plus, RefreshCw, Search, Settings, X } from "lucide-react";
+import { Check, Globe2, ImagePlus, Landmark, LogOut, Plus, RefreshCw, Search, Settings, X } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "./styles.css";
 import { hasSupabaseConfig, supabase } from "./supabase";
 import {
+  CONTINENT_COUNTRY_CODES,
+  CONTINENT_ORDER,
+  COUNTRY_TO_CONTINENT,
   countryCodeFromFeature,
   countryFlag,
   countryNameFromFeature,
+  getCountryName,
   normalizeCountryCode,
 } from "./utils/countries";
 
@@ -17,6 +21,111 @@ const WORLD_GEOJSON_URL = "/countries.geojson";
 const MAX_AVATAR_SIZE = 2 * 1024 * 1024;
 const COUNTRY_DETAIL_ZOOM_THRESHOLD = 5;
 const LANDMARK_ZOOM_THRESHOLD = 8;
+const DEFAULT_LANGUAGE = "en";
+const LANGUAGE_OPTIONS = [
+  { code: "en", label: "English" },
+  { code: "ko", label: "한국어" },
+];
+const TEXT = {
+  en: {
+    activity: "Activity",
+    addByUsername: "Add by username",
+    addFriendPrompt: "Add a username to compare visits on the map.",
+    admin: "Admin",
+    adminStats: "Admin stats",
+    africa: "Africa",
+    antarctica: "Antarctica",
+    asia: "Asia",
+    collection: "Collection",
+    collected: "Collected",
+    countryCollection: "Country Collection",
+    countryDetailsPrompt: "Country details, your visit status, and friend visits will appear here.",
+    countryVisited: "I visited this country",
+    countriesVisited: "countries visited",
+    currentUsername: "Current username",
+    europe: "Europe",
+    friendActivityEmpty: "Friend activity will show up here.",
+    friends: "Friends",
+    friendsVisited: "Friends who visited",
+    globalPercentile: "Global percentile",
+    globalPercentileEmpty: "Not enough global data yet",
+    globalTotal: "Global total",
+    language: "Language",
+    landmarkCollection: "Landmark Collection",
+    leaderboard: "Leaderboard",
+    loadingMap: "Loading world map",
+    markAsVisited: "Mark as visited",
+    northAmerica: "North America",
+    notVisited: "Not visited",
+    oceania: "Oceania",
+    profile: "Profile",
+    profileLoading: "Profile loading",
+    recentFriendVisits: "Recent friend visits",
+    refresh: "Refresh",
+    saveChanges: "Save changes",
+    searchCountry: "Search country",
+    settings: "Settings",
+    signOut: "Sign out",
+    southAmerica: "South America",
+    totalLandmarkVisits: "Total landmark visits",
+    totalUsers: "Total users",
+    totalVisitRecords: "Total visited country records",
+    uploadAvatar: "Upload avatar",
+    username: "Username",
+    visited: "Visited",
+    visitedVerb: "visited",
+    youVisited: "You visited",
+  },
+  ko: {
+    activity: "활동",
+    addByUsername: "사용자명으로 추가",
+    addFriendPrompt: "사용자명을 추가해 지도에서 여행 기록을 비교하세요.",
+    admin: "관리자",
+    adminStats: "관리자 통계",
+    africa: "아프리카",
+    antarctica: "남극",
+    asia: "아시아",
+    collection: "컬렉션",
+    collected: "수집 완료",
+    countryCollection: "국가 컬렉션",
+    countryDetailsPrompt: "국가 상세 정보, 방문 상태, 친구 방문 기록이 여기에 표시됩니다.",
+    countryVisited: "이 나라를 방문했어요",
+    countriesVisited: "개국 방문",
+    currentUsername: "현재 사용자명",
+    europe: "유럽",
+    friendActivityEmpty: "친구 활동이 여기에 표시됩니다.",
+    friends: "친구",
+    friendsVisited: "방문한 친구",
+    globalPercentile: "글로벌 상위 비율",
+    globalPercentileEmpty: "아직 글로벌 데이터가 부족합니다",
+    globalTotal: "전체 진행률",
+    language: "언어",
+    landmarkCollection: "랜드마크 컬렉션",
+    leaderboard: "리더보드",
+    loadingMap: "세계 지도 불러오는 중",
+    markAsVisited: "방문으로 표시",
+    northAmerica: "북아메리카",
+    notVisited: "미방문",
+    oceania: "오세아니아",
+    profile: "프로필",
+    profileLoading: "프로필 불러오는 중",
+    recentFriendVisits: "최근 친구 방문",
+    refresh: "새로고침",
+    saveChanges: "변경사항 저장",
+    searchCountry: "국가 검색",
+    settings: "설정",
+    signOut: "로그아웃",
+    southAmerica: "남아메리카",
+    totalLandmarkVisits: "전체 랜드마크 방문",
+    totalUsers: "전체 사용자",
+    totalVisitRecords: "전체 국가 방문 기록",
+    uploadAvatar: "아바타 업로드",
+    username: "사용자명",
+    visited: "방문 완료",
+    visitedVerb: "방문",
+    youVisited: "내 방문",
+  },
+};
 const LANDMARKS = [
   {
     id: "statue-of-liberty",
@@ -79,6 +188,19 @@ function isValidUsername(value) {
 
 function avatarLetter(username) {
   return (username || "?").trim().charAt(0).toUpperCase() || "?";
+}
+
+function getLanguage(profile) {
+  return profile?.language === "ko" ? "ko" : DEFAULT_LANGUAGE;
+}
+
+function t(language, key) {
+  return TEXT[language]?.[key] || TEXT.en[key] || key;
+}
+
+function percent(value, total) {
+  if (!total) return 0;
+  return Math.round((value / total) * 100);
 }
 
 function escapeHtml(value) {
@@ -209,7 +331,7 @@ function MapLegend() {
   );
 }
 
-function CountrySearch({ countries, onSelectCountry }) {
+function CountrySearch({ countries, language, onSelectCountry }) {
   const [query, setQuery] = useState("");
 
   const matches = useMemo(() => {
@@ -238,8 +360,8 @@ function CountrySearch({ countries, onSelectCountry }) {
       <input
         value={query}
         onChange={(event) => setQuery(event.target.value)}
-        placeholder="Search country"
-        aria-label="Search country"
+        placeholder={t(language, "searchCountry")}
+        aria-label={t(language, "searchCountry")}
         list="country-options"
       />
       <datalist id="country-options">
@@ -286,7 +408,7 @@ function FriendAvatarMarkers({ geojson, friendVisitMap, onSelectCountry }) {
   ));
 }
 
-function LandmarkMarkers({ landmarks, collectedSet, onCollect }) {
+function LandmarkMarkers({ landmarks, collectedSet, language, onCollect }) {
   return landmarks.map((landmark) => {
     const collected = collectedSet.has(landmark.id);
 
@@ -303,16 +425,16 @@ function LandmarkMarkers({ landmarks, collectedSet, onCollect }) {
               <div>
                 <h3>{landmark.name}</h3>
                 <p>
-                  {landmark.city}, {landmark.country}
+                  {landmark.city}, {getCountryName(landmark.countryCode, language) || landmark.country}
                 </p>
               </div>
             </div>
             <span className={`collection-status ${collected ? "collected" : ""}`}>
-              {collected ? "Collected" : "Not visited"}
+              {collected ? t(language, "collected") : t(language, "notVisited")}
             </span>
             <p>{landmark.description}</p>
             <button className="popup-button" onClick={() => onCollect(landmark.id)} disabled={collected}>
-              {collected ? "Visited" : "Mark as visited"}
+              {collected ? t(language, "visited") : t(language, "markAsVisited")}
             </button>
           </div>
         </Popup>
@@ -328,6 +450,7 @@ function TravelMap({
   selectedCountry,
   landmarks,
   collectedLandmarkSet,
+  language,
   onSelectCountry,
   onMarkVisited,
   onCollectLandmark,
@@ -422,7 +545,7 @@ function TravelMap({
   const onEachFeature = useCallback(
     (feature, layer) => {
       const code = countryCodeFromFeature(feature);
-      const name = countryNameFromFeature(feature);
+      const name = getCountryName(code, language) || countryNameFromFeature(feature);
       const flag = countryFlag(code);
 
       layer.on({
@@ -456,7 +579,7 @@ function TravelMap({
           <div class="popup-title">${flag} ${name}</div>
           ${friendList}
           <button class="popup-button" ${mine ? "disabled" : ""}>
-            ${mine ? "Visited" : "I visited this country"}
+            ${mine ? t(language, "visited") : t(language, "countryVisited")}
           </button>
         `;
         const button = wrapper.querySelector("button");
@@ -467,7 +590,7 @@ function TravelMap({
         return wrapper;
       });
     },
-    [countryDetailMode, friendVisitMap, onMarkVisited, onSelectCountry, styleFeature, visitedMine],
+    [countryDetailMode, friendVisitMap, language, onMarkVisited, onSelectCountry, styleFeature, visitedMine],
   );
 
   const handleZoomChange = useCallback((nextZoom) => {
@@ -509,6 +632,7 @@ function TravelMap({
         <LandmarkMarkers
           landmarks={landmarks}
           collectedSet={collectedLandmarkSet}
+          language={language}
           onCollect={onCollectLandmark}
         />
       )}
@@ -517,7 +641,7 @@ function TravelMap({
   );
 }
 
-function CountryPanel({ country, mineSet, friendVisitMap, onMarkVisited, isSaving }) {
+function CountryPanel({ country, mineSet, friendVisitMap, language, onMarkVisited, isSaving }) {
   const friends = country ? friendVisitMap.get(country.code) || [] : [];
   const mine = country ? mineSet.has(country.code) : false;
 
@@ -527,18 +651,20 @@ function CountryPanel({ country, mineSet, friendVisitMap, onMarkVisited, isSavin
         <>
           <div className="panel-heading">
             <h2>
-              {country.flag} {country.name}
+              {country.flag} {getCountryName(country.code, language) || country.name}
             </h2>
-            <p>You visited: {mine ? "YES" : "NO"}</p>
+            <p>
+              {t(language, "youVisited")}: {mine ? "YES" : "NO"}
+            </p>
           </div>
           {!mine && (
             <button className="primary-action" onClick={() => onMarkVisited(country)} disabled={isSaving}>
               <Check size={17} />
-              I visited this country
+              {t(language, "countryVisited")}
             </button>
           )}
           <div>
-            <h3>Friends who visited</h3>
+            <h3>{t(language, "friendsVisited")}</h3>
             {friends.length ? (
               <ul className="simple-list avatar-list">
                 {friends.map((friend) => (
@@ -555,27 +681,27 @@ function CountryPanel({ country, mineSet, friendVisitMap, onMarkVisited, isSavin
         </>
       ) : (
         <div className="panel-placeholder">
-          <h2>Click a country</h2>
-          <p>Country details, your visit status, and friend visits will appear here.</p>
+          <h2>{t(language, "searchCountry")}</h2>
+          <p>{t(language, "countryDetailsPrompt")}</p>
         </div>
       )}
     </aside>
   );
 }
 
-function FriendPanel({ friends, friendQuery, setFriendQuery, onAddFriend, isAdding }) {
+function FriendPanel({ friends, friendQuery, setFriendQuery, language, onAddFriend, isAdding }) {
   return (
     <aside className="side-panel">
       <div className="panel-heading">
-        <h2>Friends</h2>
+        <h2>{t(language, "friends")}</h2>
         <p>{friends.length} added</p>
       </div>
       <form className="friend-form" onSubmit={onAddFriend}>
         <input
           value={friendQuery}
           onChange={(event) => setFriendQuery(event.target.value)}
-          placeholder="Add by username"
-          aria-label="Add by username"
+          placeholder={t(language, "addByUsername")}
+          aria-label={t(language, "addByUsername")}
         />
         <button className="icon-button solid" disabled={isAdding} title="Add friend" aria-label="Add friend">
           <Plus size={18} />
@@ -591,21 +717,23 @@ function FriendPanel({ friends, friendQuery, setFriendQuery, onAddFriend, isAddi
           ))}
         </ul>
       ) : (
-        <p className="empty-text">Add a username to compare visits on the map.</p>
+        <p className="empty-text">{t(language, "addFriendPrompt")}</p>
       )}
     </aside>
   );
 }
 
-function ProfilePanel({ profile }) {
+function ProfilePanel({ profile, language }) {
   return (
     <aside className="side-panel profile-card">
       <div className="panel-heading">
         <div className="profile-card-user">
           <Avatar user={profile || { username: "Profile" }} size="md" />
           <div>
-            <h2>Profile</h2>
-            <p>{profile?.username || "Profile loading"}</p>
+            <h2>
+              {t(language, "profile")} {profile?.is_admin && <span className="admin-badge">{t(language, "admin")}</span>}
+            </h2>
+            <p>{profile?.username || t(language, "profileLoading")}</p>
           </div>
         </div>
       </div>
@@ -613,12 +741,12 @@ function ProfilePanel({ profile }) {
   );
 }
 
-function LeaderboardPanel({ leaderboard }) {
+function LeaderboardPanel({ leaderboard, language }) {
   return (
     <aside className="side-panel">
       <div className="panel-heading">
-        <h2>Leaderboard</h2>
-        <p>Countries visited</p>
+        <h2>{t(language, "leaderboard")}</h2>
+        <p>{t(language, "countriesVisited")}</p>
       </div>
       {leaderboard.length ? (
         <ol className="leaderboard-list">
@@ -686,8 +814,9 @@ function UsernameSetupModal({ onSave }) {
   );
 }
 
-function ProfileSettingsModal({ profile, onClose, onSave, onUploadAvatar }) {
+function ProfileSettingsModal({ profile, language, onClose, onSave, onUploadAvatar }) {
   const [username, setUsername] = useState(profile?.username || "");
+  const [selectedLanguage, setSelectedLanguage] = useState(language);
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -704,7 +833,7 @@ function ProfileSettingsModal({ profile, onClose, onSave, onUploadAvatar }) {
     }
 
     setIsSaving(true);
-    const result = await onSave(normalized);
+    const result = await onSave(normalized, selectedLanguage);
     setIsSaving(false);
 
     if (result?.error) {
@@ -745,7 +874,7 @@ function ProfileSettingsModal({ profile, onClose, onSave, onUploadAvatar }) {
         <div className="modal-title-row">
           <div>
             <p className="eyebrow">Settings</p>
-            <h2 id="profile-settings-title">Profile</h2>
+            <h2 id="profile-settings-title">{t(language, "profile")}</h2>
           </div>
           <button type="button" className="icon-button" onClick={onClose} title="Close" aria-label="Close">
             <X size={18} />
@@ -755,18 +884,18 @@ function ProfileSettingsModal({ profile, onClose, onSave, onUploadAvatar }) {
         <div className="avatar-upload-row">
           <Avatar user={profile} size="xl" />
           <div className="profile-summary">
-            <span>Current username</span>
+            <span>{t(language, "currentUsername")}</span>
             <strong>{profile.username || "Not set"}</strong>
           </div>
           <label className="secondary-action">
             <ImagePlus size={17} />
-            {isUploading ? "Uploading..." : "Upload avatar"}
+            {isUploading ? "Uploading..." : t(language, "uploadAvatar")}
             <input type="file" accept="image/*" onChange={handleAvatarChange} disabled={isUploading} />
           </label>
         </div>
 
         <label className="field-label">
-          Username
+          {t(language, "username")}
           <input
             value={username}
             onChange={(event) => setUsername(normalizeUsername(event.target.value))}
@@ -775,22 +904,37 @@ function ProfileSettingsModal({ profile, onClose, onSave, onUploadAvatar }) {
           />
         </label>
 
+        <label className="field-label">
+          {t(language, "language")}
+          <select
+            value={selectedLanguage}
+            onChange={(event) => setSelectedLanguage(event.target.value)}
+            aria-label={t(language, "language")}
+          >
+            {LANGUAGE_OPTIONS.map((option) => (
+              <option key={option.code} value={option.code}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
+
         {error && <p className="form-error">{error}</p>}
 
         <button className="primary-action" disabled={isSaving || isUploading}>
-          {isSaving ? "Saving..." : "Save changes"}
+          {isSaving ? "Saving..." : t(language, "saveChanges")}
         </button>
       </form>
     </div>
   );
 }
 
-function ActivityFeed({ activities }) {
+function ActivityFeed({ activities, language }) {
   return (
     <aside className="side-panel activity-feed">
       <div className="panel-heading">
-        <h2>Activity</h2>
-        <p>Recent friend visits</p>
+        <h2>{t(language, "activity")}</h2>
+        <p>{t(language, "recentFriendVisits")}</p>
       </div>
       {activities.length ? (
         <ul className="activity-list">
@@ -799,27 +943,32 @@ function ActivityFeed({ activities }) {
               <Avatar user={activity.profiles} size="sm" />
               <span>{activity.profiles?.username || "A friend"}</span>
               <span>
-                visited {countryFlag(activity.country_code)} {activity.country_name}
+                {t(language, "visitedVerb")} {countryFlag(activity.country_code)}{" "}
+                {getCountryName(activity.country_code, language)}
               </span>
             </li>
           ))}
         </ul>
       ) : (
-        <p className="empty-text">Friend activity will show up here.</p>
+        <p className="empty-text">{t(language, "friendActivityEmpty")}</p>
       )}
     </aside>
   );
 }
 
-function LandmarkCollectionModal({ landmarks, collectedSet, onCollect, onClose }) {
+function LandmarkCollectionModal({ landmarks, collectedSet, language, onCollect, onClose }) {
+  const collectedCount = landmarks.filter((landmark) => collectedSet.has(landmark.id)).length;
+
   return (
     <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="landmark-title">
       <section className="collection-modal">
         <div className="modal-title-row">
           <div>
             <p className="eyebrow">Collection</p>
-            <h2 id="landmark-title">Landmark Collection</h2>
-            <p>Collect memorable places as you build your travel story.</p>
+            <h2 id="landmark-title">{t(language, "landmarkCollection")}</h2>
+            <p>
+              {collectedCount}/{landmarks.length}
+            </p>
           </div>
           <button type="button" className="icon-button" onClick={onClose} title="Close" aria-label="Close">
             <X size={18} />
@@ -840,11 +989,11 @@ function LandmarkCollectionModal({ landmarks, collectedSet, onCollect, onClose }
                     <div>
                       <h3>{landmark.name}</h3>
                       <p>
-                        {landmark.city}, {landmark.country}
+                        {landmark.city}, {getCountryName(landmark.countryCode, language) || landmark.country}
                       </p>
                     </div>
                     <span className={`collection-status ${collected ? "collected" : ""}`}>
-                      {collected ? "Collected" : "Not visited"}
+                      {collected ? t(language, "collected") : t(language, "notVisited")}
                     </span>
                   </div>
                   <p className="landmark-description">{landmark.description}</p>
@@ -854,7 +1003,7 @@ function LandmarkCollectionModal({ landmarks, collectedSet, onCollect, onClose }
                     disabled={collected}
                   >
                     <Check size={17} />
-                    {collected ? "Visited" : "Mark as visited"}
+                    {collected ? t(language, "visited") : t(language, "markAsVisited")}
                   </button>
                 </div>
               </article>
@@ -863,6 +1012,101 @@ function LandmarkCollectionModal({ landmarks, collectedSet, onCollect, onClose }
         </div>
       </section>
     </div>
+  );
+}
+
+function CountryCollectionModal({ countriesByContinent, mineSet, language, onClose }) {
+  const totalVisited = CONTINENT_ORDER.reduce((sum, continent) => {
+    return sum + countriesByContinent[continent].filter((country) => mineSet.has(country.code)).length;
+  }, 0);
+  const totalCountries = CONTINENT_ORDER.reduce((sum, continent) => {
+    return sum + countriesByContinent[continent].length;
+  }, 0);
+
+  return (
+    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="country-collection-title">
+      <section className="collection-modal country-collection-modal">
+        <div className="modal-title-row">
+          <div>
+            <p className="eyebrow">{t(language, "collection")}</p>
+            <h2 id="country-collection-title">{t(language, "countryCollection")}</h2>
+            <p>
+              {totalVisited} / {totalCountries} {t(language, "countriesVisited")}
+            </p>
+          </div>
+          <button type="button" className="icon-button" onClick={onClose} title="Close" aria-label="Close">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="continent-list">
+          {CONTINENT_ORDER.map((continent) => {
+            const countriesForContinent = countriesByContinent[continent];
+            const visited = countriesForContinent.filter((country) => mineSet.has(country.code)).length;
+            const total = countriesForContinent.length;
+
+            return (
+              <section className="continent-section" key={continent}>
+                <div className="continent-heading">
+                  <div>
+                    <h3>{t(language, continent)}</h3>
+                    <p>
+                      {visited}/{total} {t(language, "countriesVisited")} - {percent(visited, total)}%
+                    </p>
+                  </div>
+                </div>
+                <div className="country-chip-grid">
+                  {countriesForContinent.map((country) => {
+                    const visitedCountry = mineSet.has(country.code);
+                    return (
+                      <span className={`country-chip ${visitedCountry ? "is-visited" : ""}`} key={country.code}>
+                        {country.flag} {country.name}
+                      </span>
+                    );
+                  })}
+                </div>
+              </section>
+            );
+          })}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function GlobalPercentilePanel({ stats, language }) {
+  return (
+    <aside className="side-panel">
+      <div className="panel-heading">
+        <h2>{t(language, "globalPercentile")}</h2>
+      </div>
+      <p className="empty-text">
+        {stats?.hasEnoughUsers
+          ? `You are in the top ${stats.topPercent}% of travelers`
+          : t(language, "globalPercentileEmpty")}
+      </p>
+    </aside>
+  );
+}
+
+function AdminStatsPanel({ stats, language }) {
+  if (!stats) return null;
+
+  return (
+    <aside className="side-panel admin-panel">
+      <div className="panel-heading">
+        <h2>{t(language, "adminStats")}</h2>
+        <p>{t(language, "admin")}</p>
+      </div>
+      <div className="stat-grid">
+        <span>{t(language, "totalUsers")}</span>
+        <strong>{stats.totalUsers ?? "-"}</strong>
+        <span>{t(language, "totalVisitRecords")}</span>
+        <strong>{stats.totalVisitRecords ?? "-"}</strong>
+        <span>{t(language, "totalLandmarkVisits")}</span>
+        <strong>{stats.totalLandmarkVisits ?? "-"}</strong>
+      </div>
+    </aside>
   );
 }
 
@@ -882,7 +1126,11 @@ function App() {
   const [isAddingFriend, setIsAddingFriend] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isLandmarkOpen, setIsLandmarkOpen] = useState(false);
+  const [isCountryCollectionOpen, setIsCountryCollectionOpen] = useState(false);
   const [landmarkVisits, setLandmarkVisits] = useState([]);
+  const [globalStats, setGlobalStats] = useState(null);
+
+  const language = getLanguage(profile);
 
   const countryNames = useMemo(() => {
     const map = new Map();
@@ -898,13 +1146,25 @@ function App() {
         const code = countryCodeFromFeature(feature);
         return {
           code,
-          name: countryNameFromFeature(feature),
+          name: getCountryName(code, language) || countryNameFromFeature(feature),
           flag: countryFlag(code),
         };
       })
       .filter((country) => /^[A-Z]{2}$/.test(country.code))
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [geojson]);
+  }, [geojson, language]);
+
+  const countriesByContinent = useMemo(() => {
+    const byCode = new Map(countryOptions.map((country) => [country.code, country]));
+    return Object.fromEntries(
+      CONTINENT_ORDER.map((continent) => [
+        continent,
+        CONTINENT_COUNTRY_CODES[continent]
+          .map((code) => byCode.get(code) || { code, name: getCountryName(code, language), flag: countryFlag(code) })
+          .sort((a, b) => a.name.localeCompare(b.name)),
+      ]),
+    );
+  }, [countryOptions, language]);
 
   const visitState = useMemo(() => {
     const mineSet = new Set(mineVisits.map((visit) => normalizeCountryCode(visit.country_code)));
@@ -1065,6 +1325,49 @@ function App() {
     );
   }, [countryNames, session?.user?.id]);
 
+  const refreshGlobalStats = useCallback(async () => {
+    const userId = session?.user?.id;
+    if (!supabase || !userId) return;
+
+    const [{ count: totalUsers }, { count: totalVisitRecords }, { data: visitRows }] = await Promise.all([
+      supabase.from("profiles").select("id", { count: "exact", head: true }),
+      supabase.from("visited_countries").select("id", { count: "exact", head: true }),
+      supabase.from("visited_countries").select("user_id, country_code"),
+    ]);
+
+    let totalLandmarkVisits = landmarkVisits.length;
+    const { count: landmarkCount, error: landmarkCountError } = await supabase
+      .from("landmark_visits")
+      .select("id", { count: "exact", head: true });
+    if (!landmarkCountError) {
+      totalLandmarkVisits = landmarkCount || 0;
+    }
+
+    const userVisitCounts = new Map();
+    (visitRows || []).forEach((visit) => {
+      const code = normalizeCountryCode(visit.country_code);
+      const current = userVisitCounts.get(visit.user_id) || new Set();
+      current.add(code);
+      userVisitCounts.set(visit.user_id, current);
+    });
+
+    const allCounts = Array.from(userVisitCounts.values()).map((codes) => codes.size);
+    const myCount = userVisitCounts.get(userId)?.size || 0;
+    const usersWithVisits = allCounts.length;
+    const usersWithFewerVisits = allCounts.filter((count) => count < myCount).length;
+    const percentile = usersWithVisits ? Math.round((usersWithFewerVisits / usersWithVisits) * 100) : 0;
+    const topPercent = Math.max(1, 100 - percentile);
+
+    setGlobalStats({
+      hasEnoughUsers: usersWithVisits >= 3,
+      percentile,
+      topPercent,
+      totalUsers: totalUsers || 0,
+      totalVisitRecords: totalVisitRecords || 0,
+      totalLandmarkVisits,
+    });
+  }, [landmarkVisits.length, session?.user?.id]);
+
   useEffect(() => {
     loadMapData();
 
@@ -1086,6 +1389,24 @@ function App() {
   useEffect(() => {
     refreshSocialData();
   }, [refreshSocialData]);
+
+  useEffect(() => {
+    refreshGlobalStats();
+  }, [refreshGlobalStats, mineVisits.length]);
+
+  useEffect(() => {
+    const loadLandmarkVisits = async () => {
+      const userId = session?.user?.id;
+      if (!supabase || !userId) return;
+
+      const { data, error } = await supabase.from("landmark_visits").select("*").eq("user_id", userId);
+      if (!error && data) {
+        setLandmarkVisits(data);
+      }
+    };
+
+    loadLandmarkVisits();
+  }, [session?.user?.id]);
 
   const handleMarkVisited = useCallback(
     async (country) => {
@@ -1173,7 +1494,7 @@ function App() {
     setIsAddingFriend(false);
   };
 
-  const handleSaveUsername = async (username) => {
+  const handleSaveUsername = async (username, nextLanguage) => {
     const userId = session?.user?.id;
     if (!supabase || !userId) return { error: "Profile is still loading." };
 
@@ -1187,12 +1508,23 @@ function App() {
       return { error: "Username already taken" };
     }
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from("profiles")
-      .update({ username })
+      .update({ username, language: nextLanguage || language })
       .eq("id", userId)
       .select("*")
       .single();
+
+    if (error && String(error.message || "").includes("language")) {
+      const fallback = await supabase
+        .from("profiles")
+        .update({ username })
+        .eq("id", userId)
+        .select("*")
+        .single();
+      data = fallback.data;
+      error = fallback.error;
+    }
 
     if (error) {
       return { error: error.code === "23505" ? "Username already taken" : error.message };
@@ -1255,19 +1587,32 @@ function App() {
     return { data };
   };
 
-  const handleCollectLandmark = (landmarkId) => {
+  const handleCollectLandmark = async (landmarkId) => {
     const userId = session?.user?.id;
     if (!userId || collectedLandmarkSet.has(landmarkId)) return;
 
-    setLandmarkVisits((current) => [
-      ...current,
-      {
-        id: `local-${userId}-${landmarkId}`,
-        user_id: userId,
-        landmark_id: landmarkId,
-        created_at: new Date().toISOString(),
-      },
-    ]);
+    const optimisticVisit = {
+      id: `local-${userId}-${landmarkId}`,
+      user_id: userId,
+      landmark_id: landmarkId,
+      created_at: new Date().toISOString(),
+    };
+
+    setLandmarkVisits((current) => [...current, optimisticVisit]);
+
+    if (!supabase) return;
+
+    const { data, error } = await supabase
+      .from("landmark_visits")
+      .insert({ user_id: userId, landmark_id: landmarkId })
+      .select("*")
+      .single();
+
+    if (!error && data) {
+      setLandmarkVisits((current) =>
+        current.map((visit) => (visit.id === optimisticVisit.id ? data : visit)),
+      );
+    }
   };
 
   const signOut = async () => {
@@ -1279,19 +1624,29 @@ function App() {
 
   if (!session) return <LoginScreen />;
 
+  const landmarkProgress = `${collectedLandmarkSet.size}/${LANDMARKS.length}`;
+
   return (
     <main className="app-shell">
       <header className="top-bar">
         <div>
           <p className="eyebrow">Travel Map</p>
-          <h1>{mineVisits.length} countries visited</h1>
+          <h1>
+            {mineVisits.length} {t(language, "countriesVisited")}
+          </h1>
         </div>
         <div className="top-actions">
+          <button className="landmark-button" onClick={() => setIsCountryCollectionOpen(true)}>
+            <Globe2 size={17} />
+            <span>{t(language, "countryCollection")}</span>
+          </button>
           <button className="landmark-button" onClick={() => setIsLandmarkOpen(true)}>
             <Landmark size={17} />
-            <span>Landmark Collection</span>
+            <span>
+              {t(language, "landmarkCollection")} {landmarkProgress}
+            </span>
           </button>
-          <button className="icon-button" onClick={refreshSocialData} title="Refresh" aria-label="Refresh">
+          <button className="icon-button" onClick={refreshSocialData} title={t(language, "refresh")} aria-label={t(language, "refresh")}>
             <RefreshCw size={18} />
           </button>
           <button
@@ -1303,14 +1658,14 @@ function App() {
                 setNotice("Profile is still loading.");
               }
             }}
-            title="Profile settings"
-            aria-label="Profile settings"
+            title={t(language, "settings")}
+            aria-label={t(language, "settings")}
           >
             <Avatar user={profile || { username: "Profile" }} size="sm" />
-            <span>Profile</span>
+            <span>{t(language, "profile")}</span>
             <Settings size={16} />
           </button>
-          <button className="icon-button" onClick={signOut} title="Sign out" aria-label="Sign out">
+          <button className="icon-button" onClick={signOut} title={t(language, "signOut")} aria-label={t(language, "signOut")}>
             <LogOut size={18} />
           </button>
         </div>
@@ -1327,9 +1682,19 @@ function App() {
       {profile && isProfileOpen && (
         <ProfileSettingsModal
           profile={profile}
+          language={language}
           onClose={() => setIsProfileOpen(false)}
           onSave={handleSaveUsername}
           onUploadAvatar={handleUploadAvatar}
+        />
+      )}
+
+      {isCountryCollectionOpen && (
+        <CountryCollectionModal
+          countriesByContinent={countriesByContinent}
+          mineSet={visitState.mineSet}
+          language={language}
+          onClose={() => setIsCountryCollectionOpen(false)}
         />
       )}
 
@@ -1337,6 +1702,7 @@ function App() {
         <LandmarkCollectionModal
           landmarks={LANDMARKS}
           collectedSet={collectedLandmarkSet}
+          language={language}
           onCollect={handleCollectLandmark}
           onClose={() => setIsLandmarkOpen(false)}
         />
@@ -1345,7 +1711,7 @@ function App() {
       <section className="workspace">
         <div className="map-wrap">
           {countryOptions.length > 0 && (
-            <CountrySearch countries={countryOptions} onSelectCountry={setSelectedCountry} />
+            <CountrySearch countries={countryOptions} language={language} onSelectCountry={setSelectedCountry} />
           )}
           {geojson ? (
             <TravelMap
@@ -1355,6 +1721,7 @@ function App() {
               selectedCountry={selectedCountry}
               landmarks={LANDMARKS}
               collectedLandmarkSet={collectedLandmarkSet}
+              language={language}
               onSelectCountry={setSelectedCountry}
               onMarkVisited={handleMarkVisited}
               onCollectLandmark={handleCollectLandmark}
@@ -1367,11 +1734,14 @@ function App() {
           )}
         </div>
         <div className="panel-stack">
-          <ProfilePanel profile={profile} />
+          <ProfilePanel profile={profile} language={language} />
+          <GlobalPercentilePanel stats={globalStats} language={language} />
+          {profile?.is_admin && <AdminStatsPanel stats={globalStats} language={language} />}
           <CountryPanel
             country={selectedCountry}
             mineSet={visitState.mineSet}
             friendVisitMap={friendVisitMap}
+            language={language}
             onMarkVisited={handleMarkVisited}
             isSaving={isSavingVisit}
           />
@@ -1380,12 +1750,13 @@ function App() {
               friends={friends}
               friendQuery={friendQuery}
               setFriendQuery={setFriendQuery}
+              language={language}
               onAddFriend={handleAddFriend}
               isAdding={isAddingFriend}
             />
           )}
-          <LeaderboardPanel leaderboard={leaderboard} />
-          <ActivityFeed activities={activities} />
+          <LeaderboardPanel leaderboard={leaderboard} language={language} />
+          <ActivityFeed activities={activities} language={language} />
         </div>
       </section>
     </main>

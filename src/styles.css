@@ -23,6 +23,10 @@ input {
   font: inherit;
 }
 
+select {
+  font: inherit;
+}
+
 button {
   cursor: pointer;
 }
@@ -380,6 +384,18 @@ button:disabled {
   gap: 10px;
 }
 
+.admin-badge {
+  display: inline-flex;
+  margin-left: 6px;
+  padding: 3px 6px;
+  border-radius: 999px;
+  color: #0f766e;
+  background: #ccfbf1;
+  font-size: 0.68rem;
+  font-weight: 900;
+  vertical-align: middle;
+}
+
 .panel-heading {
   display: flex;
   align-items: start;
@@ -560,6 +576,23 @@ button:disabled {
   font-weight: 800;
 }
 
+.admin-panel {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 12px;
+  color: #334155;
+  font-size: 0.9rem;
+}
+
+.stat-grid strong {
+  color: #0f172a;
+}
+
 .notice {
   position: fixed;
   top: 88px;
@@ -689,6 +722,10 @@ button:disabled {
   box-shadow: 0 24px 70px rgba(15, 23, 42, 0.24);
 }
 
+.country-collection-modal {
+  width: min(920px, 100%);
+}
+
 .collection-modal h2 {
   margin: 4px 0 0;
   font-size: 1.35rem;
@@ -704,6 +741,51 @@ button:disabled {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
+}
+
+.continent-list {
+  display: grid;
+  gap: 14px;
+}
+
+.continent-section {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid #dbe3ed;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.continent-heading h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1rem;
+}
+
+.country-chip-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.country-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 8px;
+  border: 1px solid #dbe3ed;
+  border-radius: 999px;
+  color: #64748b;
+  background: #ffffff;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.country-chip.is-visited {
+  border-color: #7dd3fc;
+  color: #075985;
+  background: #e0f2fe;
 }
 
 .landmark-card {
@@ -837,7 +919,18 @@ button:disabled {
   font-weight: 800;
 }
 
-.username-modal input:focus {
+.field-label select {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  outline: none;
+  background: #f8fafc;
+}
+
+.username-modal input:focus,
+.field-label select:focus {
   border-color: #0f766e;
   background: #ffffff;
 }
