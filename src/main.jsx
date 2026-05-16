@@ -31,16 +31,14 @@ const BADGES = [
 ];
 const TILE_LAYERS = {
   en: {
-    url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+    url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}",
     attribution:
-      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    subdomains: "abcd",
+      "Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), and the GIS User Community",
   },
   ko: {
-    url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+    url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}",
     attribution:
-      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    subdomains: "abcd",
+      "Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), and the GIS User Community",
   },
 };
 const TEXT = {
@@ -111,6 +109,11 @@ const TEXT = {
     username: "Username",
     homeCountry: "Home country",
     noHomeCountry: "No home country set",
+    chooseHomeCountry: "Choose your home country",
+    chooseHomeCountryCopy: "Your home country is tracked separately and does not count as a normal visited country.",
+    saveHomeCountry: "Save home country",
+    selectHomeCountryRequired: "Select a home country to continue.",
+    countryNotFound: "Country not found on the map.",
     removeVisited: "Remove from visited",
     badges: "Badges",
     unlocked: "Unlocked",
@@ -203,6 +206,11 @@ const TEXT = {
     username: "사용자명",
     homeCountry: "홈 국가",
     noHomeCountry: "홈 국가 미설정",
+    chooseHomeCountry: "홈 국가를 선택하세요",
+    chooseHomeCountryCopy: "홈 국가는 일반 방문 국가와 별도로 저장됩니다.",
+    saveHomeCountry: "홈 국가 저장",
+    selectHomeCountryRequired: "계속하려면 홈 국가를 선택해 주세요.",
+    countryNotFound: "지도에서 해당 국가를 찾지 못했습니다.",
     removeVisited: "방문 기록에서 제거",
     badges: "배지",
     unlocked: "해제됨",
@@ -535,7 +543,7 @@ function MapLegend({ language }) {
   );
 }
 
-function CountrySearch({ countries, language, onSelectCountry }) {
+function CountrySearch({ countries, language, onSelectCountry, onMissingCountry }) {
   const [query, setQuery] = useState("");
 
   const matches = useMemo(() => {
@@ -553,8 +561,11 @@ function CountrySearch({ countries, language, onSelectCountry }) {
   const handleSubmit = (event) => {
     event.preventDefault();
     const selected = matches[0];
-    if (!selected) return;
-    onSelectCountry(selected);
+    if (!selected) {
+      onMissingCountry?.();
+      return;
+    }
+    onSelectCountry({ ...selected, focus: true, focusKey: Date.now() });
     setQuery("");
   };
 
@@ -575,6 +586,76 @@ function CountrySearch({ countries, language, onSelectCountry }) {
       </datalist>
       <button className="search-button">{t(language, "go")}</button>
     </form>
+  );
+}
+
+function HomeCountrySetupModal({ countryOptions, language, onSave }) {
+  const [homeCountryCode, setHomeCountryCode] = useState("");
+  const [query, setQuery] = useState("");
+  const [error, setError] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSave = async (event) => {
+    event.preventDefault();
+    const typed = query.trim().toLowerCase();
+    const selected =
+      countryOptions.find((country) => country.code === homeCountryCode) ||
+      countryOptions.find((country) => country.name.toLowerCase() === typed) ||
+      countryOptions.find((country) => country.code.toLowerCase() === typed);
+    const normalized = normalizeCountryCode(selected?.code);
+    if (!normalized) {
+      setError(t(language, "selectHomeCountryRequired"));
+      return;
+    }
+
+    setIsSaving(true);
+    setError("");
+    const result = await onSave(normalized);
+    setIsSaving(false);
+
+    if (result?.error) {
+      setError(result.error);
+    }
+  };
+
+  return (
+    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="home-country-title">
+      <form className="username-modal profile-modal" onSubmit={handleSave}>
+        <div>
+          <p className="eyebrow">{t(language, "homeCountry")}</p>
+          <h2 id="home-country-title">{t(language, "chooseHomeCountry")}</h2>
+          <p>{t(language, "chooseHomeCountryCopy")}</p>
+        </div>
+
+        <label className="field-label">
+          {t(language, "homeCountry")}
+          <input
+            value={query}
+            onChange={(event) => {
+              const nextQuery = event.target.value;
+              setQuery(nextQuery);
+              const selected = countryOptions.find((country) => country.name === nextQuery);
+              setHomeCountryCode(selected?.code || "");
+            }}
+            placeholder={t(language, "searchCountry")}
+            aria-label={t(language, "homeCountry")}
+            list="home-country-options"
+            autoFocus
+          />
+          <datalist id="home-country-options">
+            {countryOptions.map((country) => (
+              <option key={country.code} value={country.name} />
+            ))}
+          </datalist>
+        </label>
+
+        {error && <p className="form-error">{error}</p>}
+
+        <button className="primary-action" disabled={isSaving}>
+          {isSaving ? t(language, "saving") : t(language, "saveHomeCountry")}
+        </button>
+      </form>
+    </div>
   );
 }
 
@@ -648,6 +729,34 @@ function LandmarkMarkers({ landmarks, collectedSet, language, onCollect }) {
   });
 }
 
+function SelectedCountryFocus({ selectedCountry, geoJsonRef, onMissingCountry }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!selectedCountry?.focus || !selectedCountry?.code) return;
+
+    let targetLayer = null;
+    geoJsonRef.current?.eachLayer((layer) => {
+      if (countryCodeFromFeature(layer.feature) === selectedCountry.code) {
+        targetLayer = layer;
+      }
+    });
+
+    if (!targetLayer) {
+      onMissingCountry?.();
+      return;
+    }
+
+    const bounds = targetLayer.getBounds?.();
+    if (bounds?.isValid?.()) {
+      map.fitBounds(bounds, { padding: [40, 40], maxZoom: 6 });
+    }
+    targetLayer.openPopup?.();
+  }, [geoJsonRef, map, onMissingCountry, selectedCountry?.code, selectedCountry?.focus, selectedCountry?.focusKey]);
+
+  return null;
+}
+
 function TravelMap({
   geojson,
   visits,
@@ -662,6 +771,7 @@ function TravelMap({
   onMarkVisited,
   onRemoveVisited,
   onCollectLandmark,
+  onMissingCountry,
 }) {
   const geoJsonRef = useRef(null);
   const [zoom, setZoom] = useState(2);
@@ -774,6 +884,7 @@ function TravelMap({
       layer.bindPopup(() => {
         const name = getCountryName(code, language) || countryNameFromFeature(feature);
         const mine = visitedMine.has(code);
+        const isHome = homeCode && code === homeCode;
         const friends = friendVisitMap.get(code) || [];
         const friendList = friends.length
           ? `<div class="popup-friends">${t(language, "friendVisits")}: ${friends
@@ -784,13 +895,14 @@ function TravelMap({
         wrapper.innerHTML = `
           <div class="popup-title">${flag} ${name}</div>
           ${friendList}
-          <button class="popup-button">
-            ${mine ? t(language, "removeVisited") : t(language, "countryVisited")}
+          <button class="popup-button" ${isHome ? "disabled" : ""}>
+            ${isHome ? t(language, "homeCountry") : mine ? t(language, "removeVisited") : t(language, "countryVisited")}
           </button>
         `;
         const button = wrapper.querySelector("button");
         L.DomEvent.on(button, "click", (event) => {
           L.DomEvent.stop(event);
+          if (isHome) return;
           if (mine) {
             onRemoveVisited({ code, flag });
           } else {
@@ -800,7 +912,7 @@ function TravelMap({
         return wrapper;
       });
     },
-    [friendVisitMap, language, onMarkVisited, onRemoveVisited, onSelectCountry, styleFeature, visitedMine],
+    [friendVisitMap, homeCode, language, onMarkVisited, onRemoveVisited, onSelectCountry, styleFeature, visitedMine],
   );
 
   const handleZoomChange = useCallback((nextZoom) => {
@@ -821,7 +933,7 @@ function TravelMap({
       <FitWorld />
       <ZoomObserver onZoomChange={handleZoomChange} />
       <TileLayer
-        key="minimal-light-map"
+        key="terrain-map"
         attribution={tileLayer.attribution}
         url={tileLayer.url}
         subdomains={tileLayer.subdomains}
@@ -833,6 +945,11 @@ function TravelMap({
         data={geojson}
         style={styleFeature}
         onEachFeature={onEachFeature}
+      />
+      <SelectedCountryFocus
+        selectedCountry={selectedCountry}
+        geoJsonRef={geoJsonRef}
+        onMissingCountry={onMissingCountry}
       />
       <FriendAvatarMarkers geojson={geojson} friendVisitMap={friendVisitMap} onSelectCountry={onSelectCountry} />
       {landmarkMode && (
@@ -848,8 +965,9 @@ function TravelMap({
   );
 }
 
-function CountryPanel({ country, mineSet, friendVisitMap, language, onMarkVisited, onRemoveVisited, isSaving }) {
+function CountryPanel({ country, mineSet, friendVisitMap, language, homeCountryCode, onMarkVisited, onRemoveVisited, isSaving }) {
   const friends = country ? friendVisitMap.get(country.code) || [] : [];
+  const isHome = Boolean(country && homeCountryCode && country.code === homeCountryCode);
   const mine = country ? mineSet.has(country.code) : false;
   const displayName = country ? getCountryName(country.code, language) || country.name : "";
 
@@ -862,16 +980,16 @@ function CountryPanel({ country, mineSet, friendVisitMap, language, onMarkVisite
               {country.flag} {displayName}
             </h2>
             <p>
-              {t(language, "youVisited")}: {mine ? t(language, "yes") : t(language, "no")}
+              {isHome ? t(language, "homeCountry") : `${t(language, "youVisited")}: ${mine ? t(language, "yes") : t(language, "no")}`}
             </p>
           </div>
           <button
             className={mine ? "secondary-action danger-action" : "primary-action"}
             onClick={() => (mine ? onRemoveVisited(country) : onMarkVisited(country))}
-            disabled={isSaving}
+            disabled={isSaving || isHome}
           >
             <Check size={17} />
-            {mine ? t(language, "removeVisited") : t(language, "countryVisited")}
+            {isHome ? t(language, "homeCountry") : mine ? t(language, "removeVisited") : t(language, "countryVisited")}
           </button>
           <div>
             <h3>{t(language, "friendsVisited")}</h3>
@@ -1049,6 +1167,11 @@ function ProfileSettingsModal({ profile, language, countryOptions = [], onClose,
       return;
     }
 
+    if (!homeCountryCode) {
+      setError(t(language, "selectHomeCountryRequired"));
+      return;
+    }
+
     setIsSaving(true);
     const result = await onSave(normalized, selectedLanguage, homeCountryCode);
     setIsSaving(false);
@@ -1143,7 +1266,7 @@ function ProfileSettingsModal({ profile, language, countryOptions = [], onClose,
             onChange={(event) => setHomeCountryCode(event.target.value)}
             aria-label={t(language, "homeCountry")}
           >
-            <option value="">{t(language, "noHomeCountry")}</option>
+            <option value="">{t(language, "selectHomeCountryRequired")}</option>
             {countryOptions.map((country) => (
               <option key={country.code} value={country.code}>
                 {country.flag} {country.name}
@@ -1252,9 +1375,14 @@ function LandmarkCollectionModal({ landmarks, collectedSet, language, onCollect,
   );
 }
 
-function CountryCollectionModal({ countriesByContinent, mineSet, language, onClose }) {
+function CountryCollectionModal({ countriesByContinent, mineSet, homeCountryCode, language, onClose }) {
   const totalVisited = CONTINENT_ORDER.reduce((sum, continent) => {
-    return sum + countriesByContinent[continent].filter((country) => mineSet.has(country.code)).length;
+    return (
+      sum +
+      countriesByContinent[continent].filter(
+        (country) => mineSet.has(country.code) || country.code === homeCountryCode,
+      ).length
+    );
   }, 0);
   const totalCountries = CONTINENT_ORDER.reduce((sum, continent) => {
     return sum + countriesByContinent[continent].length;
@@ -1279,7 +1407,9 @@ function CountryCollectionModal({ countriesByContinent, mineSet, language, onClo
         <div className="continent-list">
           {CONTINENT_ORDER.map((continent) => {
             const countriesForContinent = countriesByContinent[continent];
-            const visited = countriesForContinent.filter((country) => mineSet.has(country.code)).length;
+            const visited = countriesForContinent.filter(
+              (country) => mineSet.has(country.code) || country.code === homeCountryCode,
+            ).length;
             const total = countriesForContinent.length;
 
             return (
@@ -1294,7 +1424,7 @@ function CountryCollectionModal({ countriesByContinent, mineSet, language, onClo
                 </div>
                 <div className="country-chip-grid">
                   {countriesForContinent.map((country) => {
-                    const visitedCountry = mineSet.has(country.code);
+                    const visitedCountry = mineSet.has(country.code) || country.code === homeCountryCode;
                     return (
                       <span className={`country-chip ${visitedCountry ? "is-visited" : ""}`} key={country.code}>
                         {country.flag} {country.name}
@@ -1401,6 +1531,7 @@ function App() {
   const [animatedCountryCode, setAnimatedCountryCode] = useState("");
 
   const language = getLanguage(profile);
+  const homeCountryCode = normalizeCountryCode(profile?.home_country_code);
 
   const countryNames = useMemo(() => {
     const map = new Map();
@@ -1438,10 +1569,16 @@ function App() {
   }, [countryOptions, language]);
 
   const visitState = useMemo(() => {
-    const mineSet = new Set(mineVisits.map((visit) => normalizeCountryCode(visit.country_code)));
+    const mineSet = new Set(
+      mineVisits
+        .map((visit) => normalizeCountryCode(visit.country_code))
+        .filter((code) => code && code !== homeCountryCode),
+    );
     const friendSet = new Set(friendVisits.map((visit) => normalizeCountryCode(visit.country_code)));
     return { mineSet, friendSet };
-  }, [friendVisits, mineVisits]);
+  }, [friendVisits, homeCountryCode, mineVisits]);
+
+  const displayedVisitCount = visitState.mineSet.size + (homeCountryCode ? 1 : 0);
 
   const friendVisitMap = useMemo(() => {
     const friendById = new Map(friends.map((friend) => [friend.id, friend]));
@@ -1466,7 +1603,7 @@ function App() {
       entries.push({
         ...profile,
         username: profile.username || "You",
-        visitCount: new Set(mineVisits.map((visit) => normalizeCountryCode(visit.country_code))).size,
+        visitCount: displayedVisitCount,
       });
     }
 
@@ -1486,7 +1623,7 @@ function App() {
       if (b.visitCount !== a.visitCount) return b.visitCount - a.visitCount;
       return a.username.localeCompare(b.username);
     });
-  }, [friendVisits, friends, mineVisits, profile]);
+  }, [displayedVisitCount, friendVisits, friends, profile]);
 
   const collectedLandmarkSet = useMemo(() => {
     const userId = session?.user?.id;
@@ -1600,8 +1737,8 @@ function App() {
     const userId = session?.user?.id;
     if (!supabase || !userId) return;
 
-    const [{ count: totalUsers }, { count: totalVisitRecords }, { data: visitRows }] = await Promise.all([
-      supabase.from("profiles").select("id", { count: "exact", head: true }),
+    const [{ data: profileRows }, { count: totalVisitRecords }, { data: visitRows }] = await Promise.all([
+      supabase.from("profiles").select("id, home_country_code"),
       supabase.from("visited_countries").select("id", { count: "exact", head: true }),
       supabase.from("visited_countries").select("user_id, country_code"),
     ]);
@@ -1615,6 +1752,12 @@ function App() {
     }
 
     const userVisitCounts = new Map();
+    (profileRows || []).forEach((profileRow) => {
+      const codes = new Set();
+      const homeCode = normalizeCountryCode(profileRow.home_country_code);
+      if (homeCode) codes.add(homeCode);
+      userVisitCounts.set(profileRow.id, codes);
+    });
     (visitRows || []).forEach((visit) => {
       const code = normalizeCountryCode(visit.country_code);
       const current = userVisitCounts.get(visit.user_id) || new Set();
@@ -1628,7 +1771,7 @@ function App() {
     const usersWithFewerVisits = allCounts.filter((count) => count < myCount).length;
     const percentile = usersWithVisits ? Math.round((usersWithFewerVisits / usersWithVisits) * 100) : 0;
     const topPercent = Math.max(1, 100 - percentile);
-    const totalUserCount = totalUsers || 0;
+    const totalUserCount = profileRows?.length || 0;
     const badgeRarities = Object.fromEntries(
       BADGES.map((badge) => {
         const unlockedCount = Array.from(userVisitCounts.values()).filter(
@@ -1673,7 +1816,29 @@ function App() {
 
   useEffect(() => {
     refreshGlobalStats();
-  }, [refreshGlobalStats, mineVisits.length]);
+  }, [homeCountryCode, refreshGlobalStats, mineVisits.length]);
+
+  useEffect(() => {
+    const userId = session?.user?.id;
+    if (!supabase || !userId || !homeCountryCode) return;
+
+    const hasHomeInVisits = mineVisits.some(
+      (visit) => normalizeCountryCode(visit.country_code) === homeCountryCode,
+    );
+    if (!hasHomeInVisits) return;
+
+    setMineVisits((current) =>
+      current.filter((visit) => normalizeCountryCode(visit.country_code) !== homeCountryCode),
+    );
+    supabase
+      .from("visited_countries")
+      .delete()
+      .eq("user_id", userId)
+      .eq("country_code", homeCountryCode)
+      .then(({ error }) => {
+        if (error) setNotice(error.message);
+      });
+  }, [homeCountryCode, mineVisits, session?.user?.id]);
 
   useEffect(() => {
     const loadLandmarkVisits = async () => {
@@ -1692,7 +1857,15 @@ function App() {
   const handleMarkVisited = useCallback(
     async (country) => {
       const userId = session?.user?.id;
-      if (!supabase || !userId || !country?.code || visitState.mineSet.has(country.code)) return;
+      if (
+        !supabase ||
+        !userId ||
+        !country?.code ||
+        country.code === homeCountryCode ||
+        visitState.mineSet.has(country.code)
+      ) {
+        return;
+      }
 
       setIsSavingVisit(true);
       setAnimatedCountryCode(country.code);
@@ -1729,7 +1902,7 @@ function App() {
       window.setTimeout(() => setAnimatedCountryCode(""), 720);
       refreshSocialData();
     },
-    [refreshSocialData, session?.user?.id, visitState.mineSet],
+    [homeCountryCode, refreshSocialData, session?.user?.id, visitState.mineSet],
   );
 
   const handleRemoveVisited = useCallback(
@@ -1805,7 +1978,7 @@ function App() {
     setIsAddingFriend(false);
   };
 
-  const handleSaveUsername = async (username, nextLanguage, nextHomeCountryCode = profile?.home_country_code || "") => {
+  const handleSaveUsername = async (username, nextLanguage, nextHomeCountryCode) => {
     const userId = session?.user?.id;
     if (!supabase || !userId) return { error: t(language, "profileStillLoading") };
 
@@ -1819,13 +1992,22 @@ function App() {
       return { error: t(language, "usernameTaken") };
     }
 
+    const shouldUpdateHomeCountry = nextHomeCountryCode !== undefined;
+    const resolvedHomeCountryCode = shouldUpdateHomeCountry
+      ? normalizeCountryCode(nextHomeCountryCode)
+      : homeCountryCode;
+    const updates = {
+      username,
+      language: nextLanguage || language,
+    };
+
+    if (shouldUpdateHomeCountry) {
+      updates.home_country_code = resolvedHomeCountryCode || null;
+    }
+
     let { data, error } = await supabase
       .from("profiles")
-      .update({
-        username,
-        language: nextLanguage || language,
-        home_country_code: nextHomeCountryCode || null,
-      })
+      .update(updates)
       .eq("id", userId)
       .select("*")
       .single();
@@ -1862,12 +2044,58 @@ function App() {
       id: userId,
       username,
       language: nextLanguage || language,
-      home_country_code: nextHomeCountryCode || null,
+      home_country_code: data?.home_country_code ?? resolvedHomeCountryCode ?? profile?.home_country_code ?? null,
     };
 
     setProfile(updatedProfile);
+    if (shouldUpdateHomeCountry && resolvedHomeCountryCode) {
+      setMineVisits((current) =>
+        current.filter((visit) => normalizeCountryCode(visit.country_code) !== resolvedHomeCountryCode),
+      );
+      await supabase
+        .from("visited_countries")
+        .delete()
+        .eq("user_id", userId)
+        .eq("country_code", resolvedHomeCountryCode);
+    }
     setNotice("");
     return { data: updatedProfile };
+  };
+
+  const handleSaveHomeCountry = async (nextHomeCountryCode) => {
+    const userId = session?.user?.id;
+    const resolvedHomeCountryCode = normalizeCountryCode(nextHomeCountryCode);
+    if (!supabase || !userId) return { error: t(language, "profileStillLoading") };
+    if (!resolvedHomeCountryCode) return { error: t(language, "selectHomeCountryRequired") };
+
+    const { data, error } = await supabase
+      .from("profiles")
+      .update({ home_country_code: resolvedHomeCountryCode })
+      .eq("id", userId)
+      .select("*")
+      .single();
+
+    if (error) {
+      return { error: error.message };
+    }
+
+    setProfile((current) => ({
+      ...(current || {}),
+      ...(data || {}),
+      id: userId,
+      home_country_code: data?.home_country_code ?? resolvedHomeCountryCode,
+    }));
+    setMineVisits((current) =>
+      current.filter((visit) => normalizeCountryCode(visit.country_code) !== resolvedHomeCountryCode),
+    );
+    await supabase
+      .from("visited_countries")
+      .delete()
+      .eq("user_id", userId)
+      .eq("country_code", resolvedHomeCountryCode);
+    refreshSocialData();
+
+    return { data };
   };
 
   const handleUploadAvatar = async (file) => {
@@ -1918,8 +2146,14 @@ function App() {
       return { error: error.message };
     }
 
-    setProfile(data);
-    return { data };
+    const updatedProfile = {
+      ...(profile || {}),
+      ...(data || {}),
+      id: userId,
+      home_country_code: data?.home_country_code ?? profile?.home_country_code ?? null,
+    };
+    setProfile(updatedProfile);
+    return { data: updatedProfile };
   };
 
   const handleCollectLandmark = async (landmarkId) => {
@@ -1967,7 +2201,7 @@ function App() {
         <div>
           <p className="eyebrow">Travel Map</p>
           <h1>
-            {visitState.mineSet.size} {t(language, "countriesVisited")}
+            {displayedVisitCount} {t(language, "countriesVisited")}
           </h1>
         </div>
         <div className="top-actions">
@@ -2012,7 +2246,15 @@ function App() {
         </button>
       )}
 
-      {profile && !isValidUsername(profile.username || "") && (
+      {profile && !homeCountryCode && countryOptions.length > 0 && (
+        <HomeCountrySetupModal
+          countryOptions={countryOptions}
+          language={language}
+          onSave={handleSaveHomeCountry}
+        />
+      )}
+
+      {profile && homeCountryCode && !isValidUsername(profile.username || "") && (
         <UsernameSetupModal language={language} onSave={handleSaveUsername} />
       )}
 
@@ -2031,6 +2273,7 @@ function App() {
         <CountryCollectionModal
           countriesByContinent={countriesByContinent}
           mineSet={visitState.mineSet}
+          homeCountryCode={homeCountryCode}
           language={language}
           onClose={() => setIsCountryCollectionOpen(false)}
         />
@@ -2049,7 +2292,12 @@ function App() {
       <section className="workspace">
         <div className="map-wrap">
           {countryOptions.length > 0 && (
-            <CountrySearch countries={countryOptions} language={language} onSelectCountry={setSelectedCountry} />
+            <CountrySearch
+              countries={countryOptions}
+              language={language}
+              onSelectCountry={setSelectedCountry}
+              onMissingCountry={() => setNotice(t(language, "countryNotFound"))}
+            />
           )}
           {geojson ? (
             <TravelMap
@@ -2061,11 +2309,12 @@ function App() {
               collectedLandmarkSet={collectedLandmarkSet}
               language={language}
               animatedCountryCode={animatedCountryCode}
-              homeCountryCode={profile?.home_country_code}
+              homeCountryCode={homeCountryCode}
               onSelectCountry={setSelectedCountry}
               onMarkVisited={handleMarkVisited}
               onRemoveVisited={handleRemoveVisited}
               onCollectLandmark={handleCollectLandmark}
+              onMissingCountry={() => setNotice(t(language, "countryNotFound"))}
             />
           ) : (
             <div className="map-fallback">
@@ -2077,13 +2326,14 @@ function App() {
         <div className="panel-stack">
           <ProfilePanel profile={profile} language={language} />
           <GlobalPercentilePanel stats={globalStats} language={language} />
-          <BadgesPanel visitCount={visitState.mineSet.size} stats={globalStats} language={language} />
+          <BadgesPanel visitCount={displayedVisitCount} stats={globalStats} language={language} />
           {profile?.is_admin && <AdminStatsPanel stats={globalStats} language={language} />}
           <CountryPanel
             country={selectedCountry}
             mineSet={visitState.mineSet}
             friendVisitMap={friendVisitMap}
             language={language}
+            homeCountryCode={homeCountryCode}
             onMarkVisited={handleMarkVisited}
             onRemoveVisited={handleRemoveVisited}
             isSaving={isSavingVisit}
