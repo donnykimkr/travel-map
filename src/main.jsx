@@ -31,6 +31,9 @@ const TEXT = {
     activity: "Activity",
     addByUsername: "Add by username",
     addFriendPrompt: "Add a username to compare visits on the map.",
+    addFriendTitle: "Add friend",
+    added: "added",
+    addSupabaseEnvVars: "Add Supabase env vars",
     admin: "Admin",
     adminStats: "Admin stats",
     africa: "Africa",
@@ -38,28 +41,45 @@ const TEXT = {
     asia: "Asia",
     collection: "Collection",
     collected: "Collected",
+    close: "Close",
+    continueWithGoogle: "Continue with Google",
     countryCollection: "Country Collection",
     countryDetailsPrompt: "Country details, your visit status, and friend visits will appear here.",
     countryVisited: "I visited this country",
     countriesVisited: "countries visited",
     currentUsername: "Current username",
     europe: "Europe",
+    friend: "Friend",
     friendActivityEmpty: "Friend activity will show up here.",
+    friendFallback: "A friend",
+    friendVisitNone: "Friends: none",
+    friendVisits: "Friends",
     friends: "Friends",
     friendsVisited: "Friends who visited",
     globalPercentile: "Global percentile",
     globalPercentileEmpty: "Not enough global data yet",
+    globalPercentileTop: "You are in the top {percent}% of travelers",
     globalTotal: "Global total",
+    go: "Go",
     language: "Language",
     landmarkCollection: "Landmark Collection",
     leaderboard: "Leaderboard",
     loadingMap: "Loading world map",
+    loginCopy: "Track visited countries, add friends, and compare journeys directly on the map.",
+    mapFallback: "Preparing countries...",
+    mine: "Mine",
     markAsVisited: "Mark as visited",
     northAmerica: "North America",
     notVisited: "Not visited",
+    notSet: "Not set",
     oceania: "Oceania",
     profile: "Profile",
     profileLoading: "Profile loading",
+    profileSettings: "Profile Settings",
+    profileStillLoading: "Profile is still loading.",
+    selectImageFile: "Please choose an image file.",
+    saving: "Saving...",
+    uploading: "Uploading...",
     recentFriendVisits: "Recent friend visits",
     refresh: "Refresh",
     saveChanges: "Save changes",
@@ -72,14 +92,33 @@ const TEXT = {
     totalVisitRecords: "Total visited country records",
     uploadAvatar: "Upload avatar",
     username: "Username",
+    usernameSetupTitle: "Choose a username",
+    usernameSetupCopy: "Friends will find you by this name.",
+    usernameRules: "Use 3-20 lowercase letters, numbers, or underscores.",
+    saveUsername: "Save username",
     visited: "Visited",
+    both: "Both",
     visitedVerb: "visited",
+    worldSeen: "Mark the world you have seen.",
+    yes: "YES",
+    no: "NO",
     youVisited: "You visited",
+    noFriendsCountry: "No friends have marked this country yet.",
+    noTravelerFound: "No traveler found for that username.",
+    ownUsername: "That is your own username.",
+    validUsernameRequired: "Enter a valid username.",
+    usernameTaken: "Username already taken",
+    friendAdded: "{username} added.",
+    avatarTooLarge: "Avatar image must be 2MB or smaller.",
+    avatarUrlError: "Could not get avatar URL.",
   },
   ko: {
     activity: "활동",
     addByUsername: "사용자명으로 추가",
     addFriendPrompt: "사용자명을 추가해 지도에서 여행 기록을 비교하세요.",
+    addFriendTitle: "친구 추가",
+    added: "명 추가됨",
+    addSupabaseEnvVars: "Supabase 환경 변수 추가",
     admin: "관리자",
     adminStats: "관리자 통계",
     africa: "아프리카",
@@ -87,28 +126,45 @@ const TEXT = {
     asia: "아시아",
     collection: "컬렉션",
     collected: "수집 완료",
+    close: "닫기",
+    continueWithGoogle: "Google로 계속하기",
     countryCollection: "국가 컬렉션",
     countryDetailsPrompt: "국가 상세 정보, 방문 상태, 친구 방문 기록이 여기에 표시됩니다.",
     countryVisited: "이 나라를 방문했어요",
     countriesVisited: "개국 방문",
     currentUsername: "현재 사용자명",
     europe: "유럽",
+    friend: "친구",
     friendActivityEmpty: "친구 활동이 여기에 표시됩니다.",
+    friendFallback: "친구",
+    friendVisitNone: "친구: 없음",
+    friendVisits: "친구",
     friends: "친구",
     friendsVisited: "방문한 친구",
     globalPercentile: "글로벌 상위 비율",
     globalPercentileEmpty: "아직 글로벌 데이터가 부족합니다",
+    globalPercentileTop: "여행자 상위 {percent}%입니다",
     globalTotal: "전체 진행률",
+    go: "이동",
     language: "언어",
     landmarkCollection: "랜드마크 컬렉션",
     leaderboard: "리더보드",
     loadingMap: "세계 지도 불러오는 중",
+    loginCopy: "방문한 국가를 기록하고, 친구를 추가해 지도에서 여행을 비교하세요.",
+    mapFallback: "국가 준비 중...",
+    mine: "내 기록",
     markAsVisited: "방문으로 표시",
     northAmerica: "북아메리카",
     notVisited: "미방문",
+    notSet: "미설정",
     oceania: "오세아니아",
     profile: "프로필",
     profileLoading: "프로필 불러오는 중",
+    profileSettings: "프로필 설정",
+    profileStillLoading: "프로필을 불러오는 중입니다.",
+    selectImageFile: "이미지 파일을 선택해 주세요.",
+    saving: "저장 중...",
+    uploading: "업로드 중...",
     recentFriendVisits: "최근 친구 방문",
     refresh: "새로고침",
     saveChanges: "변경사항 저장",
@@ -121,9 +177,25 @@ const TEXT = {
     totalVisitRecords: "전체 국가 방문 기록",
     uploadAvatar: "아바타 업로드",
     username: "사용자명",
+    usernameSetupTitle: "사용자명 만들기",
+    usernameSetupCopy: "친구들이 이 이름으로 나를 찾을 수 있어요.",
+    usernameRules: "3-20자의 소문자, 숫자, 밑줄만 사용할 수 있습니다.",
+    saveUsername: "사용자명 저장",
     visited: "방문 완료",
+    both: "공통",
     visitedVerb: "방문",
+    worldSeen: "내가 본 세계를 기록하세요.",
+    yes: "예",
+    no: "아니요",
     youVisited: "내 방문",
+    noFriendsCountry: "아직 이 나라를 방문한 친구가 없습니다.",
+    noTravelerFound: "해당 사용자명을 찾을 수 없습니다.",
+    ownUsername: "내 사용자명은 추가할 수 없습니다.",
+    validUsernameRequired: "올바른 사용자명을 입력해 주세요.",
+    usernameTaken: "이미 사용 중인 사용자명입니다",
+    friendAdded: "{username}님을 추가했습니다.",
+    avatarTooLarge: "아바타 이미지는 2MB 이하여야 합니다.",
+    avatarUrlError: "아바타 URL을 가져오지 못했습니다.",
   },
 };
 const LANDMARKS = [
@@ -196,6 +268,13 @@ function getLanguage(profile) {
 
 function t(language, key) {
   return TEXT[language]?.[key] || TEXT.en[key] || key;
+}
+
+function formatText(language, key, values = {}) {
+  return Object.entries(values).reduce(
+    (text, [name, value]) => text.replace(`{${name}}`, value),
+    t(language, key),
+  );
 }
 
 function percent(value, total) {
@@ -286,6 +365,7 @@ function getFeatureBoundsCenter(feature) {
 }
 
 function LoginScreen() {
+  const language = DEFAULT_LANGUAGE;
   const handleGoogleLogin = async () => {
     if (!hasSupabaseConfig || !supabase) return;
 
@@ -302,30 +382,28 @@ function LoginScreen() {
       <section className="login-panel">
         <div>
           <p className="eyebrow">Travel Map</p>
-          <h1>Mark the world you have seen.</h1>
-          <p className="login-copy">
-            Track visited countries, add friends, and compare journeys directly on the map.
-          </p>
+          <h1>{t(language, "worldSeen")}</h1>
+          <p className="login-copy">{t(language, "loginCopy")}</p>
         </div>
         <button className="primary-action" onClick={handleGoogleLogin} disabled={!hasSupabaseConfig}>
-          {hasSupabaseConfig ? "Continue with Google" : "Add Supabase env vars"}
+          {hasSupabaseConfig ? t(language, "continueWithGoogle") : t(language, "addSupabaseEnvVars")}
         </button>
       </section>
     </main>
   );
 }
 
-function MapLegend() {
+function MapLegend({ language }) {
   return (
     <div className="legend" aria-label="Map legend">
       <span>
-        <i className="swatch mine" /> Mine
+        <i className="swatch mine" /> {t(language, "mine")}
       </span>
       <span>
-        <i className="swatch friend" /> Friend
+        <i className="swatch friend" /> {t(language, "friend")}
       </span>
       <span>
-        <i className="swatch both" /> Both
+        <i className="swatch both" /> {t(language, "both")}
       </span>
     </div>
   );
@@ -369,7 +447,7 @@ function CountrySearch({ countries, language, onSelectCountry }) {
           <option key={country.code} value={country.name} />
         ))}
       </datalist>
-      <button className="search-button">Go</button>
+      <button className="search-button">{t(language, "go")}</button>
     </form>
   );
 }
@@ -472,13 +550,55 @@ function TravelMap({
       const selected = selectedCountry?.code === code;
 
       if (countryDetailMode) {
+        if (mine && friend) {
+          return {
+            color: "#92400e",
+            weight: selected ? 1.4 : 0.7,
+            opacity: selected ? 0.32 : 0.18,
+            fill: true,
+            fillColor: "#f59e0b",
+            fillOpacity: selected ? 0.12 : 0.08,
+            lineCap: "round",
+            lineJoin: "round",
+            renderer: countryRenderer,
+          };
+        }
+
+        if (mine) {
+          return {
+            color: "#075985",
+            weight: selected ? 1.4 : 0.7,
+            opacity: selected ? 0.32 : 0.18,
+            fill: true,
+            fillColor: "#0284c7",
+            fillOpacity: selected ? 0.12 : 0.08,
+            lineCap: "round",
+            lineJoin: "round",
+            renderer: countryRenderer,
+          };
+        }
+
+        if (friend) {
+          return {
+            color: "#047857",
+            weight: selected ? 1.3 : 0.65,
+            opacity: selected ? 0.28 : 0.16,
+            fill: true,
+            fillColor: "#34d399",
+            fillOpacity: selected ? 0.1 : 0.06,
+            lineCap: "round",
+            lineJoin: "round",
+            renderer: countryRenderer,
+          };
+        }
+
         return {
           color: selected ? "#475569" : "#cbd5e1",
           weight: selected ? 1.2 : 0.55,
           opacity: 0.15,
-          fill: false,
-          fillColor: "transparent",
-          fillOpacity: 0,
+          fill: true,
+          fillColor: "#f8fafc",
+          fillOpacity: selected ? 0.06 : 0.015,
           lineCap: "round",
           lineJoin: "round",
           renderer: countryRenderer,
@@ -540,7 +660,7 @@ function TravelMap({
         layer.setStyle(styleFeature(layer.feature));
       }
     });
-  }, [countryDetailMode, styleFeature]);
+  }, [zoom, styleFeature]);
 
   const onEachFeature = useCallback(
     (feature, layer) => {
@@ -558,9 +678,9 @@ function TravelMap({
           layer.setStyle({
             weight: countryDetailMode ? 1.2 : 2,
             opacity: countryDetailMode ? 0.2 : style.opacity || 1,
-            fill: !countryDetailMode,
-            fillColor: countryDetailMode ? "transparent" : style.fillColor,
-            fillOpacity: countryDetailMode ? 0 : Math.max(style.fillOpacity, 0.72),
+            fill: true,
+            fillColor: style.fillColor,
+            fillOpacity: countryDetailMode ? Math.max(style.fillOpacity, 0.08) : Math.max(style.fillOpacity, 0.72),
           });
         },
         mouseout: () => {
@@ -572,8 +692,10 @@ function TravelMap({
         const mine = visitedMine.has(code);
         const friends = friendVisitMap.get(code) || [];
         const friendList = friends.length
-          ? `<div class="popup-friends">Friends: ${friends.map((friend) => friend.username).join(", ")}</div>`
-          : `<div class="popup-friends">Friends: none</div>`;
+          ? `<div class="popup-friends">${t(language, "friendVisits")}: ${friends
+              .map((friend) => friend.username)
+              .join(", ")}</div>`
+          : `<div class="popup-friends">${t(language, "friendVisitNone")}</div>`;
         const wrapper = L.DomUtil.create("div", "country-popup");
         wrapper.innerHTML = `
           <div class="popup-title">${flag} ${name}</div>
@@ -636,7 +758,7 @@ function TravelMap({
           onCollect={onCollectLandmark}
         />
       )}
-      {!countryDetailMode && <MapLegend />}
+      {!countryDetailMode && <MapLegend language={language} />}
     </MapContainer>
   );
 }
@@ -654,7 +776,7 @@ function CountryPanel({ country, mineSet, friendVisitMap, language, onMarkVisite
               {country.flag} {getCountryName(country.code, language) || country.name}
             </h2>
             <p>
-              {t(language, "youVisited")}: {mine ? "YES" : "NO"}
+              {t(language, "youVisited")}: {mine ? t(language, "yes") : t(language, "no")}
             </p>
           </div>
           {!mine && (
@@ -675,7 +797,7 @@ function CountryPanel({ country, mineSet, friendVisitMap, language, onMarkVisite
                 ))}
               </ul>
             ) : (
-              <p className="empty-text">No friends have marked this country yet.</p>
+              <p className="empty-text">{t(language, "noFriendsCountry")}</p>
             )}
           </div>
         </>
@@ -694,7 +816,9 @@ function FriendPanel({ friends, friendQuery, setFriendQuery, language, onAddFrie
     <aside className="side-panel">
       <div className="panel-heading">
         <h2>{t(language, "friends")}</h2>
-        <p>{friends.length} added</p>
+        <p>
+          {friends.length} {t(language, "added")}
+        </p>
       </div>
       <form className="friend-form" onSubmit={onAddFriend}>
         <input
@@ -703,7 +827,7 @@ function FriendPanel({ friends, friendQuery, setFriendQuery, language, onAddFrie
           placeholder={t(language, "addByUsername")}
           aria-label={t(language, "addByUsername")}
         />
-        <button className="icon-button solid" disabled={isAdding} title="Add friend" aria-label="Add friend">
+        <button className="icon-button solid" disabled={isAdding} title={t(language, "addFriendTitle")} aria-label={t(language, "addFriendTitle")}>
           <Plus size={18} />
         </button>
       </form>
@@ -760,13 +884,13 @@ function LeaderboardPanel({ leaderboard, language }) {
           ))}
         </ol>
       ) : (
-        <p className="empty-text">Add friends to compare travel progress.</p>
+        <p className="empty-text">{t(language, "addFriendPrompt")}</p>
       )}
     </aside>
   );
 }
 
-function UsernameSetupModal({ onSave }) {
+function UsernameSetupModal({ language, onSave }) {
   const [username, setUsername] = useState("");
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -778,7 +902,7 @@ function UsernameSetupModal({ onSave }) {
     setError("");
 
     if (!isValidUsername(normalized)) {
-      setError("Use 3-20 lowercase letters, numbers, or underscores.");
+      setError(t(language, "usernameRules"));
       return;
     }
 
@@ -795,8 +919,8 @@ function UsernameSetupModal({ onSave }) {
       <form className="username-modal" onSubmit={handleSubmit}>
         <div>
           <p className="eyebrow">Travel Map</p>
-          <h2 id="username-title">Choose a username</h2>
-          <p>Friends will find you by this name.</p>
+          <h2 id="username-title">{t(language, "usernameSetupTitle")}</h2>
+          <p>{t(language, "usernameSetupCopy")}</p>
         </div>
         <input
           value={username}
@@ -807,7 +931,7 @@ function UsernameSetupModal({ onSave }) {
         />
         {error && <p className="form-error">{error}</p>}
         <button className="primary-action" disabled={isSaving}>
-          Save username
+          {t(language, "saveUsername")}
         </button>
       </form>
     </div>
@@ -828,7 +952,7 @@ function ProfileSettingsModal({ profile, language, onClose, onSave, onUploadAvat
     setError("");
 
     if (!isValidUsername(normalized)) {
-      setError("Use 3-20 lowercase letters, numbers, or underscores.");
+      setError(t(language, "usernameRules"));
       return;
     }
 
@@ -851,11 +975,11 @@ function ProfileSettingsModal({ profile, language, onClose, onSave, onUploadAvat
 
     if (!file) return;
     if (!file.type.startsWith("image/")) {
-      setError("Please choose an image file.");
+      setError(t(language, "selectImageFile"));
       return;
     }
     if (file.size > MAX_AVATAR_SIZE) {
-      setError("Avatar image must be 2MB or smaller.");
+      setError(t(language, "avatarTooLarge"));
       return;
     }
 
@@ -873,10 +997,10 @@ function ProfileSettingsModal({ profile, language, onClose, onSave, onUploadAvat
       <form className="username-modal profile-modal" onSubmit={handleSave}>
         <div className="modal-title-row">
           <div>
-            <p className="eyebrow">Settings</p>
-            <h2 id="profile-settings-title">{t(language, "profile")}</h2>
+            <p className="eyebrow">{t(language, "settings")}</p>
+            <h2 id="profile-settings-title">{t(language, "profileSettings")}</h2>
           </div>
-          <button type="button" className="icon-button" onClick={onClose} title="Close" aria-label="Close">
+          <button type="button" className="icon-button" onClick={onClose} title={t(language, "close")} aria-label={t(language, "close")}>
             <X size={18} />
           </button>
         </div>
@@ -885,11 +1009,11 @@ function ProfileSettingsModal({ profile, language, onClose, onSave, onUploadAvat
           <Avatar user={profile} size="xl" />
           <div className="profile-summary">
             <span>{t(language, "currentUsername")}</span>
-            <strong>{profile.username || "Not set"}</strong>
+            <strong>{profile.username || t(language, "notSet")}</strong>
           </div>
           <label className="secondary-action">
             <ImagePlus size={17} />
-            {isUploading ? "Uploading..." : t(language, "uploadAvatar")}
+            {isUploading ? t(language, "uploading") : t(language, "uploadAvatar")}
             <input type="file" accept="image/*" onChange={handleAvatarChange} disabled={isUploading} />
           </label>
         </div>
@@ -922,7 +1046,7 @@ function ProfileSettingsModal({ profile, language, onClose, onSave, onUploadAvat
         {error && <p className="form-error">{error}</p>}
 
         <button className="primary-action" disabled={isSaving || isUploading}>
-          {isSaving ? "Saving..." : t(language, "saveChanges")}
+          {isSaving ? t(language, "saving") : t(language, "saveChanges")}
         </button>
       </form>
     </div>
@@ -941,7 +1065,7 @@ function ActivityFeed({ activities, language }) {
           {activities.map((activity) => (
             <li key={activity.id}>
               <Avatar user={activity.profiles} size="sm" />
-              <span>{activity.profiles?.username || "A friend"}</span>
+              <span>{activity.profiles?.username || t(language, "friendFallback")}</span>
               <span>
                 {t(language, "visitedVerb")} {countryFlag(activity.country_code)}{" "}
                 {getCountryName(activity.country_code, language)}
@@ -970,7 +1094,7 @@ function LandmarkCollectionModal({ landmarks, collectedSet, language, onCollect,
               {collectedCount}/{landmarks.length}
             </p>
           </div>
-          <button type="button" className="icon-button" onClick={onClose} title="Close" aria-label="Close">
+          <button type="button" className="icon-button" onClick={onClose} title={t(language, "close")} aria-label={t(language, "close")}>
             <X size={18} />
           </button>
         </div>
@@ -1034,7 +1158,7 @@ function CountryCollectionModal({ countriesByContinent, mineSet, language, onClo
               {totalVisited} / {totalCountries} {t(language, "countriesVisited")}
             </p>
           </div>
-          <button type="button" className="icon-button" onClick={onClose} title="Close" aria-label="Close">
+          <button type="button" className="icon-button" onClick={onClose} title={t(language, "close")} aria-label={t(language, "close")}>
             <X size={18} />
           </button>
         </div>
@@ -1082,7 +1206,7 @@ function GlobalPercentilePanel({ stats, language }) {
       </div>
       <p className="empty-text">
         {stats?.hasEnoughUsers
-          ? `You are in the top ${stats.topPercent}% of travelers`
+          ? formatText(language, "globalPercentileTop", { percent: stats.topPercent })
           : t(language, "globalPercentileEmpty")}
       </p>
     </aside>
@@ -1135,10 +1259,11 @@ function App() {
   const countryNames = useMemo(() => {
     const map = new Map();
     geojson?.features?.forEach((feature) => {
-      map.set(countryCodeFromFeature(feature), countryNameFromFeature(feature));
+      const code = countryCodeFromFeature(feature);
+      map.set(code, getCountryName(code, language) || countryNameFromFeature(feature));
     });
     return map;
-  }, [geojson]);
+  }, [geojson, language]);
 
   const countryOptions = useMemo(() => {
     return (geojson?.features || [])
@@ -1455,7 +1580,7 @@ function App() {
     if (!supabase || !username || !userId) return;
 
     if (!isValidUsername(username)) {
-      setNotice("Enter a valid username.");
+      setNotice(t(language, "validUsernameRequired"));
       return;
     }
 
@@ -1467,13 +1592,13 @@ function App() {
       .maybeSingle();
 
     if (findError || !friend) {
-      setNotice("No traveler found for that username.");
+      setNotice(t(language, "noTravelerFound"));
       setIsAddingFriend(false);
       return;
     }
 
     if (friend.id === userId) {
-      setNotice("That is your own username.");
+      setNotice(t(language, "ownUsername"));
       setIsAddingFriend(false);
       return;
     }
@@ -1487,7 +1612,7 @@ function App() {
       setNotice(error.message);
     } else {
       setFriendQuery("");
-      setNotice(`${friend.username} added.`);
+      setNotice(formatText(language, "friendAdded", { username: friend.username }));
       refreshSocialData();
     }
 
@@ -1496,7 +1621,7 @@ function App() {
 
   const handleSaveUsername = async (username, nextLanguage) => {
     const userId = session?.user?.id;
-    if (!supabase || !userId) return { error: "Profile is still loading." };
+    if (!supabase || !userId) return { error: t(language, "profileStillLoading") };
 
     const { data: existing } = await supabase
       .from("profiles")
@@ -1505,7 +1630,7 @@ function App() {
       .maybeSingle();
 
     if (existing && existing.id !== userId) {
-      return { error: "Username already taken" };
+      return { error: t(language, "usernameTaken") };
     }
 
     let { data, error } = await supabase
@@ -1527,17 +1652,25 @@ function App() {
     }
 
     if (error) {
-      return { error: error.code === "23505" ? "Username already taken" : error.message };
+      return { error: error.code === "23505" ? t(language, "usernameTaken") : error.message };
     }
 
-    setProfile(data);
+    const updatedProfile = {
+      ...(profile || {}),
+      ...(data || {}),
+      id: userId,
+      username,
+      language: nextLanguage || language,
+    };
+
+    setProfile(updatedProfile);
     setNotice("");
-    return { data };
+    return { data: updatedProfile };
   };
 
   const handleUploadAvatar = async (file) => {
     const userId = session?.user?.id;
-    if (!supabase || !userId) return { error: "Profile is still loading." };
+    if (!supabase || !userId) return { error: t(language, "profileStillLoading") };
 
     const extension = file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
     const path = `${userId}/${Date.now()}.${extension}`;
@@ -1569,7 +1702,7 @@ function App() {
     const avatarUrl = publicData?.publicUrl;
 
     if (!avatarUrl) {
-      return { error: "Could not get avatar URL." };
+      return { error: t(language, "avatarUrlError") };
     }
 
     const { data, error } = await supabase
@@ -1655,7 +1788,7 @@ function App() {
               if (profile) {
                 setIsProfileOpen(true);
               } else {
-                setNotice("Profile is still loading.");
+                setNotice(t(language, "profileStillLoading"));
               }
             }}
             title={t(language, "settings")}
@@ -1677,7 +1810,9 @@ function App() {
         </button>
       )}
 
-      {profile && !isValidUsername(profile.username || "") && <UsernameSetupModal onSave={handleSaveUsername} />}
+      {profile && !isValidUsername(profile.username || "") && (
+        <UsernameSetupModal language={language} onSave={handleSaveUsername} />
+      )}
 
       {profile && isProfileOpen && (
         <ProfileSettingsModal
@@ -1728,8 +1863,8 @@ function App() {
             />
           ) : (
             <div className="map-fallback">
-              <h2>Loading world map</h2>
-              <p>{geojsonError || "Preparing countries..."}</p>
+              <h2>{t(language, "loadingMap")}</h2>
+              <p>{geojsonError || t(language, "mapFallback")}</p>
             </div>
           )}
         </div>
