@@ -221,12 +221,12 @@ function createAvatarIcon(friends) {
 function createLandmarkIcon(landmark, collected) {
   return L.divIcon({
     className: "landmark-marker",
-    html: `<span class="landmark-marker-pin ${collected ? "is-collected" : ""}">${escapeHtml(
-      landmark.icon,
-    )}</span>`,
-    iconSize: [38, 38],
-    iconAnchor: [19, 19],
-    popupAnchor: [0, -18],
+    html: `<span class="landmark-marker-pin ${collected ? "is-collected" : ""}" aria-label="${escapeHtml(
+      landmark.name,
+    )}"><span class="landmark-marker-core"></span></span>`,
+    iconSize: [28, 34],
+    iconAnchor: [14, 30],
+    popupAnchor: [0, -28],
   });
 }
 
@@ -383,11 +383,11 @@ function LandmarkMarkers({ landmarks, collectedSet, onCollect }) {
         key={landmark.id}
         position={[landmark.lat, landmark.lng]}
         icon={createLandmarkIcon(landmark, collected)}
+        title={landmark.name}
       >
         <Popup className="landmark-popup">
           <div className="landmark-popup-content">
             <div className="landmark-popup-title">
-              <span aria-hidden="true">{landmark.icon}</span>
               <div>
                 <h3>{landmark.name}</h3>
                 <p>
@@ -395,7 +395,6 @@ function LandmarkMarkers({ landmarks, collectedSet, onCollect }) {
                 </p>
               </div>
             </div>
-            <p>{landmark.description}</p>
             <span className={`collection-status ${collected ? "collected" : ""}`}>
               {collected ? "Collected" : "Not visited"}
             </span>
@@ -437,10 +436,10 @@ function TravelMap({
 
       if (landmarkMode) {
         return {
-          color: selected ? "#0f172a" : "#94a3b8",
-          weight: selected ? 1.8 : 0.7,
-          fillColor: "#ffffff",
-          fillOpacity: selected ? 0.14 : 0.02,
+          color: selected ? "#475569" : "#cbd5e1",
+          weight: selected ? 1.2 : 0.55,
+          fill: false,
+          fillOpacity: 0,
           lineCap: "round",
           lineJoin: "round",
           renderer: countryRenderer,
@@ -513,7 +512,11 @@ function TravelMap({
         },
         mouseover: () => {
           const style = styleFeature(feature);
-          layer.setStyle({ weight: 2, fillOpacity: landmarkMode ? 0.16 : Math.max(style.fillOpacity, 0.72) });
+          layer.setStyle({
+            weight: landmarkMode ? 1.2 : 2,
+            fill: !landmarkMode,
+            fillOpacity: landmarkMode ? 0 : Math.max(style.fillOpacity, 0.72),
+          });
         },
         mouseout: () => {
           geoJsonRef.current?.resetStyle(layer);
