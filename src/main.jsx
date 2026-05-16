@@ -26,6 +26,19 @@ const LANGUAGE_OPTIONS = [
   { code: "en", label: "English" },
   { code: "ko", label: "한국어" },
 ];
+const TILE_LAYERS = {
+  en: {
+    url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+    subdomains: "abcd",
+  },
+  ko: {
+    url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    subdomains: "abc",
+  },
+};
 const TEXT = {
   en: {
     activity: "Activity",
@@ -541,6 +554,7 @@ function TravelMap({
   const visitedFriend = visits.friendSet;
   const countryDetailMode = zoom >= COUNTRY_DETAIL_ZOOM_THRESHOLD;
   const landmarkMode = zoom >= LANDMARK_ZOOM_THRESHOLD;
+  const tileLayer = TILE_LAYERS[language] || TILE_LAYERS.en;
 
   const styleFeature = useCallback(
     (feature) => {
@@ -554,10 +568,10 @@ function TravelMap({
           return {
             color: "#92400e",
             weight: selected ? 1.4 : 0.7,
-            opacity: selected ? 0.32 : 0.18,
+            opacity: selected ? 0.42 : 0.24,
             fill: true,
             fillColor: "#f59e0b",
-            fillOpacity: selected ? 0.12 : 0.08,
+            fillOpacity: selected ? 0.25 : 0.22,
             lineCap: "round",
             lineJoin: "round",
             renderer: countryRenderer,
@@ -568,10 +582,10 @@ function TravelMap({
           return {
             color: "#075985",
             weight: selected ? 1.4 : 0.7,
-            opacity: selected ? 0.32 : 0.18,
+            opacity: selected ? 0.4 : 0.22,
             fill: true,
             fillColor: "#0284c7",
-            fillOpacity: selected ? 0.12 : 0.08,
+            fillOpacity: selected ? 0.24 : 0.2,
             lineCap: "round",
             lineJoin: "round",
             renderer: countryRenderer,
@@ -582,10 +596,10 @@ function TravelMap({
           return {
             color: "#047857",
             weight: selected ? 1.3 : 0.65,
-            opacity: selected ? 0.28 : 0.16,
+            opacity: selected ? 0.36 : 0.2,
             fill: true,
             fillColor: "#34d399",
-            fillOpacity: selected ? 0.1 : 0.06,
+            fillOpacity: selected ? 0.22 : 0.18,
             lineCap: "round",
             lineJoin: "round",
             renderer: countryRenderer,
@@ -598,7 +612,7 @@ function TravelMap({
           opacity: 0.15,
           fill: true,
           fillColor: "#f8fafc",
-          fillOpacity: selected ? 0.06 : 0.015,
+          fillOpacity: selected ? 0.08 : 0.025,
           lineCap: "round",
           lineJoin: "round",
           renderer: countryRenderer,
@@ -680,7 +694,7 @@ function TravelMap({
             opacity: countryDetailMode ? 0.2 : style.opacity || 1,
             fill: true,
             fillColor: style.fillColor,
-            fillOpacity: countryDetailMode ? Math.max(style.fillOpacity, 0.08) : Math.max(style.fillOpacity, 0.72),
+            fillOpacity: countryDetailMode ? Math.max(style.fillOpacity, 0.2) : Math.max(style.fillOpacity, 0.72),
           });
         },
         mouseout: () => {
@@ -736,8 +750,10 @@ function TravelMap({
       <FitWorld />
       <ZoomObserver onZoomChange={handleZoomChange} />
       <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        key={language}
+        attribution={tileLayer.attribution}
+        url={tileLayer.url}
+        subdomains={tileLayer.subdomains}
         noWrap
       />
       <GeoJSON
