@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { GeoJSON, MapContainer, Marker, TileLayer, useMap } from "react-leaflet";
+import { GeoJSON, MapContainer, Marker, Popup, TileLayer, useMap, useMapEvents } from "react-leaflet";
 import { Check, ImagePlus, Landmark, LogOut, Plus, RefreshCw, Search, Settings, X } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -15,13 +15,17 @@ import {
 
 const WORLD_GEOJSON_URL = "/countries.geojson";
 const MAX_AVATAR_SIZE = 2 * 1024 * 1024;
+const LANDMARK_ZOOM_THRESHOLD = 5;
 const LANDMARKS = [
   {
     id: "statue-of-liberty",
     icon: "🗽",
     name: "Statue of Liberty",
+    countryCode: "US",
     country: "United States",
     city: "New York",
+    lat: 40.6892,
+    lng: -74.0445,
     description:
       "A famous symbol of freedom and one of the most iconic landmarks in the United States.",
   },
@@ -29,10 +33,101 @@ const LANDMARKS = [
     id: "gyeongbokgung-palace",
     icon: "🏯",
     name: "Gyeongbokgung Palace",
+    countryCode: "KR",
     country: "South Korea",
     city: "Seoul",
+    lat: 37.5796,
+    lng: 126.977,
     description:
       "A historic royal palace from the Joseon Dynasty and one of Seoul’s most important cultural landmarks.",
+  },
+  {
+    id: "lotte-world-tower",
+    icon: "🏙️",
+    name: "Lotte World Tower",
+    countryCode: "KR",
+    country: "South Korea",
+    city: "Seoul",
+    lat: 37.5125,
+    lng: 127.1025,
+    description: "A soaring skyscraper in Seoul and one of the tallest buildings in the world.",
+  },
+  {
+    id: "tokyo-tower",
+    icon: "🗼",
+    name: "Tokyo Tower",
+    countryCode: "JP",
+    country: "Japan",
+    city: "Tokyo",
+    lat: 35.6586,
+    lng: 139.7454,
+    description: "A bright communications tower and beloved symbol of Tokyo's skyline.",
+  },
+  {
+    id: "big-ben",
+    icon: "🕰️",
+    name: "Big Ben",
+    countryCode: "GB",
+    country: "United Kingdom",
+    city: "London",
+    lat: 51.5007,
+    lng: -0.1246,
+    description: "The famous clock tower at the Palace of Westminster in the heart of London.",
+  },
+  {
+    id: "eiffel-tower",
+    icon: "🗼",
+    name: "Eiffel Tower",
+    countryCode: "FR",
+    country: "France",
+    city: "Paris",
+    lat: 48.8584,
+    lng: 2.2945,
+    description: "Paris's iron landmark and one of the most recognizable structures in the world.",
+  },
+  {
+    id: "sydney-opera-house",
+    icon: "🎭",
+    name: "Sydney Opera House",
+    countryCode: "AU",
+    country: "Australia",
+    city: "Sydney",
+    lat: -33.8568,
+    lng: 151.2153,
+    description: "A waterfront performing arts venue famous for its sail-like architecture.",
+  },
+  {
+    id: "oriental-pearl-tower",
+    icon: "📡",
+    name: "Oriental Pearl Tower",
+    countryCode: "CN",
+    country: "China",
+    city: "Shanghai",
+    lat: 31.2397,
+    lng: 121.4998,
+    description: "A distinctive TV tower in Shanghai's Pudong skyline.",
+  },
+  {
+    id: "shanghai-tower",
+    icon: "🏢",
+    name: "Shanghai Tower",
+    countryCode: "CN",
+    country: "China",
+    city: "Shanghai",
+    lat: 31.2335,
+    lng: 121.5055,
+    description: "A twisting supertall skyscraper and one of Shanghai's defining modern landmarks.",
+  },
+  {
+    id: "forbidden-city",
+    icon: "🏯",
+    name: "Forbidden City",
+    countryCode: "CN",
+    country: "China",
+    city: "Beijing",
+    lat: 39.9163,
+    lng: 116.3972,
+    description: "A vast imperial palace complex that served Chinese emperors for centuries.",
   },
 ];
 
@@ -42,6 +137,18 @@ function FitWorld() {
   useEffect(() => {
     map.setView([22, 8], 2);
   }, [map]);
+
+  return null;
+}
+
+function ZoomObserver({ onZoomChange }) {
+  const map = useMapEvents({
+    zoomend: () => onZoomChange(map.getZoom()),
+  });
+
+  useEffect(() => {
+    onZoomChange(map.getZoom());
+  }, [map, onZoomChange]);
 
   return null;
 }
@@ -108,6 +215,18 @@ function createAvatarIcon(friends) {
     html,
     iconSize: [92, 32],
     iconAnchor: [18, 16],
+  });
+}
+
+function createLandmarkIcon(landmark, collected) {
+  return L.divIcon({
+    className: "landmark-marker",
+    html: `<span class="landmark-marker-pin ${collected ? "is-collected" : ""}">${escapeHtml(
+      landmark.icon,
+    )}</span>`,
+    iconSize: [38, 38],
+    iconAnchor: [19, 19],
+    popupAnchor: [0, -18],
   });
 }
 
@@ -255,12 +374,59 @@ function FriendAvatarMarkers({ geojson, friendVisitMap, onSelectCountry }) {
   ));
 }
 
-function TravelMap({ geojson, visits, friendVisitMap, selectedCountry, onSelectCountry, onMarkVisited }) {
+function LandmarkMarkers({ landmarks, collectedSet, onCollect }) {
+  return landmarks.map((landmark) => {
+    const collected = collectedSet.has(landmark.id);
+
+    return (
+      <Marker
+        key={landmark.id}
+        position={[landmark.lat, landmark.lng]}
+        icon={createLandmarkIcon(landmark, collected)}
+      >
+        <Popup className="landmark-popup">
+          <div className="landmark-popup-content">
+            <div className="landmark-popup-title">
+              <span aria-hidden="true">{landmark.icon}</span>
+              <div>
+                <h3>{landmark.name}</h3>
+                <p>
+                  {landmark.city}, {landmark.country}
+                </p>
+              </div>
+            </div>
+            <p>{landmark.description}</p>
+            <span className={`collection-status ${collected ? "collected" : ""}`}>
+              {collected ? "Collected" : "Not visited"}
+            </span>
+            <button className="popup-button" onClick={() => onCollect(landmark.id)} disabled={collected}>
+              {collected ? "Visited" : "Mark as visited"}
+            </button>
+          </div>
+        </Popup>
+      </Marker>
+    );
+  });
+}
+
+function TravelMap({
+  geojson,
+  visits,
+  friendVisitMap,
+  selectedCountry,
+  landmarks,
+  collectedLandmarkSet,
+  onSelectCountry,
+  onMarkVisited,
+  onCollectLandmark,
+}) {
   const geoJsonRef = useRef(null);
+  const [zoom, setZoom] = useState(2);
   const countryRenderer = useMemo(() => L.canvas({ padding: 0.5, tolerance: 4 }), []);
 
   const visitedMine = visits.mineSet;
   const visitedFriend = visits.friendSet;
+  const landmarkMode = zoom >= LANDMARK_ZOOM_THRESHOLD;
 
   const styleFeature = useCallback(
     (feature) => {
@@ -268,6 +434,18 @@ function TravelMap({ geojson, visits, friendVisitMap, selectedCountry, onSelectC
       const mine = visitedMine.has(code);
       const friend = visitedFriend.has(code);
       const selected = selectedCountry?.code === code;
+
+      if (landmarkMode) {
+        return {
+          color: selected ? "#0f172a" : "#94a3b8",
+          weight: selected ? 1.8 : 0.7,
+          fillColor: "#ffffff",
+          fillOpacity: selected ? 0.14 : 0.02,
+          lineCap: "round",
+          lineJoin: "round",
+          renderer: countryRenderer,
+        };
+      }
 
       if (mine && friend) {
         return {
@@ -315,7 +493,7 @@ function TravelMap({ geojson, visits, friendVisitMap, selectedCountry, onSelectC
         renderer: countryRenderer,
       };
     },
-    [countryRenderer, selectedCountry?.code, visitedFriend, visitedMine],
+    [countryRenderer, landmarkMode, selectedCountry?.code, visitedFriend, visitedMine],
   );
 
   useEffect(() => {
@@ -334,7 +512,8 @@ function TravelMap({ geojson, visits, friendVisitMap, selectedCountry, onSelectC
           layer.openPopup();
         },
         mouseover: () => {
-          layer.setStyle({ weight: 2, fillOpacity: Math.max(styleFeature(feature).fillOpacity, 0.72) });
+          const style = styleFeature(feature);
+          layer.setStyle({ weight: 2, fillOpacity: landmarkMode ? 0.16 : Math.max(style.fillOpacity, 0.72) });
         },
         mouseout: () => {
           geoJsonRef.current?.resetStyle(layer);
@@ -363,15 +542,19 @@ function TravelMap({ geojson, visits, friendVisitMap, selectedCountry, onSelectC
         return wrapper;
       });
     },
-    [friendVisitMap, onMarkVisited, onSelectCountry, styleFeature, visitedMine],
+    [friendVisitMap, landmarkMode, onMarkVisited, onSelectCountry, styleFeature, visitedMine],
   );
+
+  const handleZoomChange = useCallback((nextZoom) => {
+    setZoom(nextZoom);
+  }, []);
 
   return (
     <MapContainer
       center={[22, 8]}
       zoom={2}
       minZoom={2}
-      maxZoom={7}
+      maxZoom={12}
       maxBounds={[
         [-85, -180],
         [85, 180],
@@ -381,6 +564,7 @@ function TravelMap({ geojson, visits, friendVisitMap, selectedCountry, onSelectC
       preferCanvas
     >
       <FitWorld />
+      <ZoomObserver onZoomChange={handleZoomChange} />
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -394,7 +578,14 @@ function TravelMap({ geojson, visits, friendVisitMap, selectedCountry, onSelectC
         onEachFeature={onEachFeature}
       />
       <FriendAvatarMarkers geojson={geojson} friendVisitMap={friendVisitMap} onSelectCountry={onSelectCountry} />
-      <MapLegend />
+      {landmarkMode && (
+        <LandmarkMarkers
+          landmarks={landmarks}
+          collectedSet={collectedLandmarkSet}
+          onCollect={onCollectLandmark}
+        />
+      )}
+      {!landmarkMode && <MapLegend />}
     </MapContainer>
   );
 }
@@ -1235,8 +1426,11 @@ function App() {
               visits={visitState}
               friendVisitMap={friendVisitMap}
               selectedCountry={selectedCountry}
+              landmarks={LANDMARKS}
+              collectedLandmarkSet={collectedLandmarkSet}
               onSelectCountry={setSelectedCountry}
               onMarkVisited={handleMarkVisited}
+              onCollectLandmark={handleCollectLandmark}
             />
           ) : (
             <div className="map-fallback">
