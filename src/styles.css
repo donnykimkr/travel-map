@@ -246,10 +246,6 @@ button:disabled {
   background: #d4edf7;
 }
 
-.leaflet-tile-pane {
-  filter: saturate(0.98) contrast(0.98) brightness(1.02);
-}
-
 .legend {
   position: absolute;
   right: 16px;
