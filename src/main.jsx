@@ -418,10 +418,10 @@ function getIsoA2FromFeature(feature) {
 }
 
 function getCountryStyle(feature, context) {
-  const code = countryCodeFromFeature(feature);
-  const isoA2 = getIsoA2FromFeature(feature);
+  const code = getIsoA2FromFeature(feature);
+  const homeCountryCode = normalizeCountryCode(context.homeCountryCode);
   const selected = context.selectedCountryCode === code;
-  const isHomeCountry = Boolean(context.homeCountryCode && isoA2 === context.homeCountryCode);
+  const isHomeCountry = Boolean(homeCountryCode && code === homeCountryCode);
   const isUserVisited = context.visitedMine.has(code);
   const isFriendVisited = context.visitedFriend.has(code);
 
@@ -434,12 +434,12 @@ function getCountryStyle(feature, context) {
   if (isHomeCountry) {
     return {
       ...base,
-      color: isUserVisited || isFriendVisited ? "#9f1239" : "#be123c",
-      weight: selected ? 2.2 : 1.25,
-      opacity: selected ? 0.72 : 0.42,
+      color: "#b91c1c",
+      weight: selected ? 2.2 : 1.5,
+      opacity: selected ? 0.78 : 0.52,
       fill: true,
-      fillColor: isUserVisited || isFriendVisited ? "#fb7185" : "#fda4af",
-      fillOpacity: selected ? 0.42 : isUserVisited || isFriendVisited ? 0.34 : 0.24,
+      fillColor: "#ef4444",
+      fillOpacity: selected ? 0.38 : 0.28,
     };
   }
 
